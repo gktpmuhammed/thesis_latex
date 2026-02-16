@@ -1,0 +1,23 @@
+\chapter{Methodology}\label{chapter:methodology}
+\section{LLM-based Report Decomposition}
+To enable fine-grained, organ-specific radiology report generation, we implement a preprocessing pipeline that decomposes full free-text radiology reports into structured, organ-specific findings. This is achieved using a Large Language Model (LLM) steered by a predefined anatomical schema.
+
+\subsection{Anatomical Schema Definition}
+We define a comprehensive schema covering major anatomical regions in chest CT scans. The schema targets the following structures:
+\begin{itemize}
+    \item \textbf{Thorax}: Lung, Heart, Aorta, Trachea, Esophagus, Portal Vein, Rib.
+    \item \textbf{Abdomen}: Liver, Gallbladder, Stomach, Pancreas, Spleen, Kidney, Adrenal, Colon, Small Bowel, Bladder.
+\end{itemize}
+This schema ensures that the model learns to associate specific image regions with their corresponding textual descriptions, rather than generating a monolithic report.
+
+\subsection{Decomposition Pipeline}
+We utilize the \textbf{Llama-3.3-70B-Instruct} model for the decomposition task. Due to the significant memory requirements of this 70-billion parameter model, we employ the \textbf{AWQ (Activation-aware Weight Quantization)} version \cite{lin2023awq} to fit the model within the memory constraints of our GPU infrastructure (e.g., 4$\times$A100). The model is served using \textbf{vLLM} \cite{kwon2023efficient}, a high-throughput and memory-efficient LLM serving engine.
+
+The decomposition process involves the following steps:
+\begin{enumerate}
+    \item \textbf{Input}: The raw "Findings" and "Impression" sections of the radiology report are concatenated.
+    \item \textbf{Prompting}: The LLM is prompted with a system instruction to act as a radiologist and extract organ-specific information according to our defined JSON schema. The prompt explicitly requests valid JSON output and handles missing organs by assigning them a \texttt{null} value.
+    \item \textbf{Output Parsing}: The generated output is parsed to extract the JSON structure, separating findings and impressions for each organ.
+\end{enumerate}
+
+The implementation uses a robust parsing mechanism to handle potential formatting irregularities in the LLM's output, ensuring high data quality for downstream training.

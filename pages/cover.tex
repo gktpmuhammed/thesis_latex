@@ -9,10 +9,14 @@
 
   \centering
 
-  \IfFileExists{logos/tum-\fg.pdf}{%
-    \includegraphics[height=20mm]{logos/tum-\fg.pdf}
+  \IfFileExists{logos/tum-black_alt.pdf}{%
+    \includegraphics[height=20mm]{logos/tum-black_alt.pdf}
   }{%
-    \vspace*{20mm}
+    \IfFileExists{logos/tum-\fg.pdf}{%
+      \includegraphics[height=20mm]{logos/tum-\fg.pdf}
+    }{%
+      \vspace*{20mm}
+    }
   }
 
   \vspace{5mm}

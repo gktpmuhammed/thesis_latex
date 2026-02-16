@@ -1,10 +1,14 @@
 \begin{titlepage}
   \centering
 
-  \IfFileExists{logos/tum-\fg.pdf}{%
-    \includegraphics[height=20mm]{logos/tum-\fg.pdf}
+    \IfFileExists{logos/tum-black_alt.pdf}{%
+    \includegraphics[height=20mm]{logos/tum-black_alt.pdf}
   }{%
-    \vspace*{20mm}
+    \IfFileExists{logos/tum-\fg.pdf}{%
+      \includegraphics[height=20mm]{logos/tum-\fg.pdf}
+    }{%
+      \vspace*{20mm}
+    }
   }
 
   \vspace{5mm}
@@ -13,16 +17,16 @@
   \vspace{5mm}
   {\large\MakeUppercase{\getUniversity{}} \par}
 
-  \vspace{20mm}
+  \vspace{10mm}
   {\Large \getDoctype{} in \getDegree{} \par}
 
-  \vspace{15mm}
+  \vspace{10mm}
   {\huge\bfseries \getTitle{} \par}
 
-  \vspace{10mm}
+  \vspace{5mm}
   {\huge\bfseries \foreignlanguage{ngerman}{\getTitleGer{}} \par}
 
-  \vspace{15mm}
+  \vspace{10mm}
   \begin{tabular}{l l}
     Author:          & \getAuthor{}         \\
     Examiner:      & \getSupervisor{}     \\
