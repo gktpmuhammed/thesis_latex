@@ -1,3 +1,96 @@
+% !TeX root = ../main.tex
 \chapter{Related Work}\label{chapter:related_work}
 
-\section{Section}
+This chapter reviews the key areas of prior work that form the foundation for this thesis. Section~\ref{sec:rw_vit} discusses the Vision Transformer architecture and its adaptation to medical imaging. Section~\ref{sec:rw_vlm} covers vision--language models, including both general-purpose and medical variants. Section~\ref{sec:rw_llm} introduces large language models and parameter-efficient fine-tuning techniques. Section~\ref{sec:rw_reportgen} surveys radiology report generation methods. Finally, Section~\ref{sec:rw_3dseg} covers 3D medical image segmentation and organ-guided attention mechanisms.
+
+%% ========================================================
+\section{Vision Transformers in Medical Imaging}\label{sec:rw_vit}
+%% ========================================================
+
+The Vision Transformer (ViT)~\cite{dosovitskiy2021image} introduced the idea of applying the transformer architecture, originally designed for natural language processing, to image recognition. ViT divides an input image into fixed-size non-overlapping patches, projects each patch into an embedding, and processes the resulting sequence through a standard transformer encoder. By treating image patches as tokens, ViT eliminates the need for convolutional inductive biases and achieves competitive or superior performance compared to CNNs on large-scale benchmarks such as ImageNet.
+
+A key limitation of ViT is its reliance on large-scale supervised pretraining. To address this, He et al.~\cite{he2022masked} proposed Masked Autoencoders (MAE), a self-supervised pretraining method for ViT. MAE randomly masks a large proportion (e.g., 75\%) of image patches during training and learns to reconstruct the missing pixels. This approach enables learning strong visual representations from unlabeled data, which is particularly valuable in the medical domain where labeled data is scarce. MAE-pretrained ViTs have shown strong transfer learning performance across a variety of downstream tasks.
+
+In the medical imaging domain, transformers have been widely adopted. TransUNet~\cite{chen2021transunet} combines a CNN encoder with a transformer for medical image segmentation, showing that transformers can capture long-range dependencies that are crucial for understanding anatomical structures. UNETR~\cite{hatamizadeh2022unetr} extends this approach to 3D medical image segmentation by using a ViT encoder to process volumetric data directly, avoiding the information loss associated with 2D slice-by-slice processing.
+
+The core vision encoder used in this thesis is a 3D ViT initialized with MAE-pretrained weights and adapted from the BLIP framework~\cite{li2022blip}, which is available through the LAVIS library~\cite{li2023lavis}. Unlike standard 2D ViTs, this encoder processes volumetric CT inputs with 3D patch embeddings, preserving spatial relationships across all three dimensions.
+
+%% ========================================================
+\section{Vision--Language Models}\label{sec:rw_vlm}
+%% ========================================================
+
+Vision--language models (VLMs) aim to bridge the gap between visual perception and natural language understanding. These models learn joint representations of images and text, enabling tasks such as image captioning, visual question answering, and cross-modal retrieval.
+
+\subsection{Contrastive Learning: CLIP}
+
+CLIP (Contrastive Language--Image Pre-training)~\cite{radford2021learning} introduced a scalable approach to learning visual representations from natural language supervision. By training a vision encoder and a text encoder to maximize the similarity of matching image--text pairs while minimizing the similarity of non-matching pairs, CLIP learns transferable visual concepts. Trained on 400 million image--text pairs from the internet, CLIP demonstrates strong zero-shot transfer to a wide range of downstream visual tasks. Its contrastive learning paradigm has become a foundational building block for many subsequent VLMs.
+
+\subsection{Generative VLMs}
+
+While CLIP focuses on alignment, generative VLMs extend the paradigm to produce natural language outputs conditioned on visual inputs. BLIP~\cite{li2022blip} proposes a unified framework that jointly trains a contrastive alignment objective, an image--text matching objective, and a generative language modeling objective. This multi-task design enables BLIP to be effective for both understanding and generation tasks. The LAVIS library~\cite{li2023lavis} provides a standardized implementation of BLIP and related models.
+
+Flamingo~\cite{alayrac2022flamingo} takes a different approach by interleaving visual tokens with text tokens in a frozen large language model. It introduces gated cross-attention layers to condition the LLM on visual features, demonstrating strong few-shot learning capabilities across diverse vision--language tasks.
+
+LLaVA (Large Language-and-Vision Assistant)~\cite{liu2024visual} simplifies the VLM architecture by using a linear projection layer to map visual features from a pretrained CLIP encoder into the embedding space of a large language model. Despite its architectural simplicity, LLaVA achieves competitive performance through visual instruction tuning, where the model is trained on instruction-following data that combines images with text instructions.
+
+\subsection{Medical VLMs}
+
+Adapting VLMs to the medical domain presents unique challenges. Medical images have different characteristics from natural images, including higher resolution, domain-specific features, and the need for fine-grained understanding. BiomedCLIP~\cite{zhang2023biomedclip} addresses this by pretraining a CLIP-style model on 15 million biomedical image--text pairs from PubMed, demonstrating that domain-specific pretraining significantly improves performance on biomedical tasks.
+
+For 3D medical imaging, Hamamci et al.~\cite{hamamci2024foundation} introduced CT-CLIP, a contrastive learning framework for 3D computed tomography. Trained on the CT-RATE dataset, which pairs volumetric CT scans with radiology reports, CT-CLIP learns 3D visual representations aligned with clinical text. This work represents one of the first large-scale efforts to apply vision--language pretraining to volumetric medical data.
+
+MedGemma~\cite{yang2024medgemma} is a family of medical foundation models built on top of Google's Gemma architecture~\cite{team2024gemma}. MedGemma extends the general-purpose Gemma language model with medical knowledge through continued pretraining on biomedical literature and clinical data. The instruction-tuned variant (MedGemma-4B-IT) demonstrates strong performance on medical question answering and report understanding tasks, making it well-suited as a language decoder for medical VLM architectures.
+
+%% ========================================================
+\section{Large Language Models and Parameter-Efficient Fine-Tuning}\label{sec:rw_llm}
+%% ========================================================
+
+Large language models (LLMs) such as the LLaMA family~\cite{touvron2023llama} and Gemma~\cite{team2024gemma} have demonstrated remarkable capabilities in natural language understanding and generation. These models, typically containing billions of parameters, are pretrained on massive text corpora and can be adapted to specific downstream tasks through fine-tuning.
+
+However, full fine-tuning of LLMs is computationally prohibitive for most research settings. Parameter-efficient fine-tuning (PEFT) methods address this challenge by updating only a small subset of model parameters while keeping the majority frozen.
+
+\subsection{LoRA}
+
+LoRA (Low-Rank Adaptation)~\cite{hu2022lora} is one of the most widely adopted PEFT methods. LoRA introduces trainable low-rank decomposition matrices into the attention layers of a pretrained model. Instead of updating the full weight matrix $W \in \mathbb{R}^{d \times k}$, LoRA learns two smaller matrices $A \in \mathbb{R}^{d \times r}$ and $B \in \mathbb{R}^{r \times k}$ where $r \ll \min(d, k)$, such that the adapted weight becomes $W + AB$. This reduces the number of trainable parameters by orders of magnitude while maintaining competitive performance.
+
+\subsection{QLoRA and Quantization}
+
+QLoRA~\cite{dettmers2023qlora} further reduces the memory requirements by combining LoRA with 4-bit quantization. The pretrained model weights are quantized to 4-bit Normal Float (NF4) precision using the BitsAndBytes library, while the LoRA adapter weights are maintained in higher precision (e.g., BFloat16) for training. This enables fine-tuning of models with billions of parameters on consumer-grade hardware. A frozen, 4-bit quantized LLM decoder combined with trainable adapter layers or projectors has become a common paradigm for building resource-efficient VLMs.
+
+%% ========================================================
+\section{Radiology Report Generation}\label{sec:rw_reportgen}
+%% ========================================================
+
+Automatic radiology report generation is the task of producing clinically accurate free-text reports from medical images. This task is more challenging than generic image captioning because generated reports must be factually accurate, cover all relevant findings, and follow clinical conventions.
+
+\subsection{Traditional Approaches}
+
+Early approaches to radiology report generation adapted encoder--decoder architectures from image captioning. Jing et al.~\cite{jing2018automatic} proposed a co-attention mechanism combined with a hierarchical LSTM decoder to generate structured medical reports from chest X-rays. However, these CNN--RNN frameworks typically produce generic descriptions and struggle with capturing rare or subtle findings.
+
+\subsection{Transformer-Based Approaches}
+
+Transformer-based methods have significantly improved report generation quality. Chen et al.~\cite{chen2020generating} introduced a memory-driven transformer that uses a relational memory module to record key information during generation, improving the coherence of long reports. In subsequent work, Chen et al.~\cite{chen2022crossmodal} proposed cross-modal memory networks that maintain separate memory banks for visual and textual features, enabling better cross-modal reasoning.
+
+Nicolson et al.~\cite{nicolson2023improving} demonstrated that warm-starting the encoder and decoder from pretrained models substantially improves chest X-ray report generation, highlighting the importance of leveraging existing pretrained representations.
+
+\subsection{LLM-Based Approaches}
+
+More recent approaches leverage frozen large language models as report decoders. R2GenGPT~\cite{wang2023r2gengpt} demonstrated that a frozen LLM combined with a trainable visual encoder and a lightweight projection layer can generate high-quality radiology reports. This paradigm benefits from the strong language understanding capabilities of pretrained LLMs while keeping training costs manageable.
+
+The approach adopted in this thesis follows a similar paradigm: a trainable 3D vision encoder produces visual embeddings that are projected into the embedding space of a frozen MedGemma decoder via a linear projection layer, following the design principle introduced by LLaVA~\cite{liu2024visual}.
+
+%% ========================================================
+\section{3D Medical Image Segmentation and Organ-Guided Attention}\label{sec:rw_3dseg}
+%% ========================================================
+
+Accurate localization of anatomical structures is essential for generating organ-specific radiology reports. The availability of automated whole-body segmentation tools has enabled new approaches that leverage anatomical priors for medical image understanding.
+
+\subsection{TotalSegmentator}
+
+TotalSegmentator~\cite{wasserthal2023totalsegmentator} is a widely used tool for automatic segmentation of 104 anatomical structures in CT images. Built on the nnU-Net framework, TotalSegmentator provides robust, out-of-the-box segmentation of organs, bones, vessels, and muscles. The segmentation masks produced by TotalSegmentator can serve as anatomical priors for downstream tasks, including region-of-interest (ROI) guided attention mechanisms.
+
+\subsection{Organ-Guided Attention}
+
+Incorporating anatomical localization into VLM architectures enables organ-specific reasoning. Rather than processing the entire image as a flat sequence of tokens, organ-guided attention mechanisms restrict the model's attention to regions corresponding to specific anatomical structures. This approach draws upon the concept of learnable queries from architectures such as the Perceiver, where a fixed set of learned query vectors attend to a variable-length input through cross-attention.
+
+In the context of multi-task learning~\cite{caruana1997multitask}, organ-specific feature extraction can be further enhanced by auxiliary classification objectives. By jointly training the visual encoder to perform disease classification alongside report generation, the model learns more discriminative organ-level representations. This auxiliary loss acts as an inductive bias that encourages the visual encoder to capture clinically relevant features.

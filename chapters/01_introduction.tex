@@ -2,94 +2,14 @@
 % Add the above to each chapter to make compiling the PDF easier in some editors.
 
 \chapter{Introduction}\label{chapter:introduction}
+As deep learning has continued to advance over recent years, it has been applied to various fields of science and engineering. One of the most prominent applications of deep learning is in the field of computer vision. Deep learning models have achieved state-of-the-art performance on various computer vision tasks, such as image classification, object detection, and image segmentation.
+However, deep learning models are data-hungry and require large amounts of labeled data to achieve high performance. This is especially true for medical imaging, where obtaining large-scale labeled datasets is challenging due to privacy concerns and the high cost of expert annotation. 
+Traditional CNN-RNN-based frameworks suffered from a lack of localized reasoning and from weak integration of medical knowledge. This is partially solved by the introduction of the attention mechanism by transformers. 
 
-\section{Section}
-Citation test~\parencite{latex}.
+Despite these improvements, several limitations still remain. Attention mechanisms improve the alignment between image regions and text tokens. However, most existing methods rely on 2D image representations. They process single images or independent slices from volumetric scans. As a result, they fail to capture full three-dimensional context. In clinical practice, many important findings depend on volumetric information, such as lesion shape, spatial extent, and inter-slice continuity. These details are often lost when using only 2D inputs. Therefore, models trained on 2D data struggle to perform consistent localized reasoning across multiple slices.
 
-Acronyms must be added in \texttt{main.tex} and are referenced using macros. The first occurrence is automatically replaced with the long version of the acronym, while all subsequent usages use the abbreviation.
+There are several reasons why most studies focus on 2D approaches. First, large-scale 3D medical datasets are difficult to collect and share. Privacy regulations and storage requirements make this process challenging. Second, training 3D deep learning models requires significantly higher computational resources. This limits their practical adoption. Third, most existing pretrained vision and vision–language models are designed for 2D data. As a result, transfer learning for 3D medical imaging is less mature. These factors have led researchers to favor simpler 2D pipelines, even though they do not fully represent clinical imaging data.
 
-E.g. \texttt{\textbackslash ac\{TUM\}, \textbackslash ac\{TUM\}} $\Rightarrow$ \ac{TUM}, \ac{TUM}
+Recent advances in vision–language models (VLMs) offer new opportunities to overcome these limitations. VLMs enable stronger alignment between visual features and natural language. They support better reasoning across modalities. However, most medical VLM studies still rely on 2D image inputs. The potential of volumetric reasoning in combination with large language models remains underexplored.
 
-For more details, see the documentation of the \texttt{acronym} package\footnote{\url{https://ctan.org/pkg/acronym}}.
-\subsection{Subsection}
-
-See~\autoref{tab:sample}, \autoref{fig:sample-drawing}, \autoref{fig:sample-plot}, \autoref{fig:sample-listing}.
-
-\begin{table}[htpb]
-  \caption[Example table]{An example for a simple table.}\label{tab:sample}
-  \centering
-  \begin{tabular}{l l l l}
-    \toprule
-      A & B & C & D \\
-    \midrule
-      1 & 2 & 1 & 2 \\
-      2 & 3 & 2 & 3 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{figure}[htpb]
-  \centering
-  % This should probably go into a file in figures/
-  \begin{tikzpicture}[node distance=3cm]
-    \node (R0) {$R_1$};
-    \node (R1) [right of=R0] {$R_2$};
-    \node (R2) [below of=R1] {$R_4$};
-    \node (R3) [below of=R0] {$R_3$};
-    \node (R4) [right of=R1] {$R_5$};
-
-    \path[every node]
-      (R0) edge (R1)
-      (R0) edge (R3)
-      (R3) edge (R2)
-      (R2) edge (R1)
-      (R1) edge (R4);
-  \end{tikzpicture}
-  \caption[Example drawing]{An example for a simple drawing.}\label{fig:sample-drawing}
-\end{figure}
-
-\begin{figure}[htpb]
-  \centering
-
-  \pgfplotstableset{col sep=&, row sep=\\}
-  % This should probably go into a file in data/
-  \pgfplotstableread{
-    a & b    \\
-    1 & 1000 \\
-    2 & 1500 \\
-    3 & 1600 \\
-  }\exampleA
-  \pgfplotstableread{
-    a & b    \\
-    1 & 1200 \\
-    2 & 800 \\
-    3 & 1400 \\
-  }\exampleB
-  % This should probably go into a file in figures/
-  \begin{tikzpicture}
-    \begin{axis}[
-        ymin=0,
-        legend style={legend pos=south east},
-        grid,
-        thick,
-        ylabel=Y,
-        xlabel=X
-      ]
-      \addplot table[x=a, y=b]{\exampleA};
-      \addlegendentry{Example A}
-      \addplot table[x=a, y=b]{\exampleB};
-      \addlegendentry{Example B}
-    \end{axis}
-  \end{tikzpicture}
-  \caption[Example plot]{An example for a simple plot.}\label{fig:sample-plot}
-\end{figure}
-
-\begin{figure}[htpb]
-  \centering
-  \begin{tabular}{c}
-  \begin{lstlisting}[language=SQL]
-    SELECT * FROM tbl WHERE tbl.str = "str"
-  \end{lstlisting}
-  \end{tabular}
-  \caption[Example listing]{An example for a source code listing.}\label{fig:sample-listing}
-\end{figure}
+This thesis aims to address this gap by focusing on 3D vision–language modeling for radiology report generation. A volumetric vision encoder is used to preserve spatial relationships across slices. This allows the model to better capture anatomical structure and disease patterns. In addition, state-of-the-art large language models are used to improve medical text understanding and generation. These models help produce clearer, more structured, and clinically accurate reports. By combining 3D visual reasoning with advanced medical language understanding, this work aims to build a more reliable and clinically meaningful report-generation system.
