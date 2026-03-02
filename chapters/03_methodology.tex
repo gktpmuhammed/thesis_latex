@@ -1,23 +1,67 @@
+% !TeX root = ../main.tex
 \chapter{Methodology}\label{chapter:methodology}
-\section{LLM-based Report Decomposition}
-To enable fine-grained, organ-specific radiology report generation, we implement a preprocessing pipeline that decomposes full free-text radiology reports into structured, organ-specific findings. This is achieved using a Large Language Model (LLM) steered by a predefined anatomical schema.
 
-\subsection{Anatomical Schema Definition}
-We define a comprehensive schema covering major anatomical regions in chest CT scans. The schema targets the following structures:
+\section{End-to-End Task Definition}
+We formulate organ-aware 3D radiology report generation as follows: given a chest CT volume $V$ and organ-aware supervision signals, generate clinically coherent text that is decomposed by organ and then assembled into a final report. The model receives a volumetric image input, extracts organ-conditioned visual representations, and decodes text with one of three decoder families: MedGemma~\cite{yang2024medgemma}, GPT-2~\cite{radford2019language}, or BioBART~\cite{yuan2022biobart}.
+
+The output target is a structured set of organ-level findings/impression snippets, followed by a merged report used for evaluation. This setup allows direct analysis of both global report quality and organ-level failure modes.
+
+\section{LLM-based Report Decomposition}
+To support organ-specific supervision, we preprocess each ground-truth report with an LLM-based decomposition pipeline.
+
+\subsection{Anatomical Schema}
+We define a schema covering thoracic organs plus commonly visible upper-abdominal structures:
 \begin{itemize}
     \item \textbf{Thorax}: Lung, Heart, Aorta, Trachea, Esophagus, Portal Vein, Rib.
     \item \textbf{Abdomen}: Liver, Gallbladder, Stomach, Pancreas, Spleen, Kidney, Adrenal, Colon, Small Bowel, Bladder.
 \end{itemize}
-This schema ensures that the model learns to associate specific image regions with their corresponding textual descriptions, rather than generating a monolithic report.
+Because the dataset is chest CT, visibility of abdominal organs is variable across scans. These organs are therefore treated as optional supervision targets when not adequately visible.
 
 \subsection{Decomposition Pipeline}
-We utilize the \textbf{Llama-3.3-70B-Instruct} model for the decomposition task. Due to the significant memory requirements of this 70-billion parameter model, we employ the \textbf{AWQ (Activation-aware Weight Quantization)} version \cite{lin2023awq} to fit the model within the memory constraints of our GPU infrastructure (e.g., 4$\times$A100). The model is served using \textbf{vLLM} \cite{kwon2023efficient}, a high-throughput and memory-efficient LLM serving engine.
-
-The decomposition process involves the following steps:
+We use \textbf{Llama-3.3-70B-Instruct} served with \textbf{vLLM}~\cite{kwon2023efficient} and AWQ quantization~\cite{lin2023awq}. For each report:
 \begin{enumerate}
-    \item \textbf{Input}: The raw "Findings" and "Impression" sections of the radiology report are concatenated.
-    \item \textbf{Prompting}: The LLM is prompted with a system instruction to act as a radiologist and extract organ-specific information according to our defined JSON schema. The prompt explicitly requests valid JSON output and handles missing organs by assigning them a \texttt{null} value.
-    \item \textbf{Output Parsing}: The generated output is parsed to extract the JSON structure, separating findings and impressions for each organ.
+    \item Findings and impression are concatenated.
+    \item The LLM is prompted to produce valid JSON aligned with the anatomical schema.
+    \item Missing organs are assigned \texttt{null}.
+    \item Parsed outputs are stored as organ-level supervision labels.
 \end{enumerate}
 
-The implementation uses a robust parsing mechanism to handle potential formatting irregularities in the LLM's output, ensuring high data quality for downstream training.
+\section{Organ Masking and Visual Token Extraction}
+We leverage segmentation priors from automated 3D segmentation tools such as TotalSegmentator~\cite{wasserthal2023totalsegmentator} to construct organ masks. Let $M_o$ denote the binary mask for organ $o$ and $F(V)$ denote encoder feature maps from the 3D vision backbone.
+
+For each organ, the model computes organ-conditioned visual features using masked pooling and/or organ-query cross-attention:
+\begin{equation}
+z_o = \phi\!\left(F(V), M_o\right),
+\end{equation}
+where $\phi$ is implemented as either multi-token extraction (e.g., 8 tokens per organ) or compressed single-token extraction, depending on the ablation setting.
+
+This design enables controlled experiments on token granularity (single-token vs multi-token), which is a central axis of this thesis.
+
+\section{Vision-Language Bridging and Decoder Adaptation}
+\subsection{Bridge / Projector}
+Organ-conditioned visual tokens are projected into the decoder embedding space through a trainable projector module. In MedGemma variants, we additionally evaluate positional embeddings for organ identity and sentinel wrappers (e.g., \texttt{<vis>} / \texttt{<end\_vis>}) around visual prefixes to stabilize multimodal conditioning.
+
+\subsection{Decoder Families}
+We compare three decoder families under the same organ-conditioned visual interface:
+\begin{itemize}
+    \item \textbf{MedGemma} (medical causal decoder)~\cite{yang2024medgemma}
+    \item \textbf{GPT-2} (generic causal decoder)~\cite{radford2019language}
+    \item \textbf{BioBART} (biomedical encoder-decoder)~\cite{yuan2022biobart}
+\end{itemize}
+These comparisons are treated as a core experimental axis, not as future work.
+
+\subsection{Parameter-Efficient Fine-Tuning}
+For large decoders (especially MedGemma), we use LoRA adapters~\cite{hu2022lora} on selected linear layers while keeping most pretrained parameters frozen. This makes multi-experiment ablations feasible while preserving pretrained language priors.
+
+\section{Training and Inference Protocol}
+\subsection{Training}
+Training minimizes autoregressive text loss on organ-level targets conditioned on the corresponding organ visual context. We evaluate architectural and optimization variants including:
+\begin{itemize}
+    \item token count per organ (single-token vs multi-token),
+    \item alternative bridge modules (direct projection vs Perceiver-style resampling~\cite{jaegle2021perceiver}),
+    \item multiscale vision features,
+    \item training strategies (e.g., curriculum and hard-example variants).
+\end{itemize}
+
+\subsection{Inference and Report Assembly}
+At inference time, organ-level text segments are generated and concatenated into a final report template. If an organ is absent or poorly visible, the model uses the corresponding optional/empty slot and does not force unsupported findings. This prevents artificial hallucinations from schema-completion artifacts.
