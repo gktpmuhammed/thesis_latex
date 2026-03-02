@@ -1,186 +1,512 @@
 \chapter{Experiments and Results}\label{chapter:experiments}
 
-\section{Dataset}
-We validate all models on \textbf{CT-RATE}~\cite{hamamci2024foundation}, a large multimodal dataset for 3D CT. CT-RATE pairs volumetric chest CT scans with free-text reports and provides an established benchmark setting for report generation and related multimodal tasks~\cite{hamamci2024generatect}.
+\section{Experimental Objectives and Research Questions}\label{sec:exp_objectives}
+This chapter evaluates whether organ-aware token design and decoder choice improve 3D CT report generation quality under a consistent CT-RATE protocol. The experiments are structured around four research questions:
 
-\subsection{Dataset Overview}
-The dataset contains 25,692 CT volumes from 21,304 unique patients. We follow the official train/validation/test split.
+\begin{itemize}
+    \item \textbf{RQ1 (Token Interface):} Does organ-token interface design (multi-token baseline vs compressed/sentinel/positional variants) improve global clinical-report metrics?
+    \item \textbf{RQ2 (Architecture):} Do heavier visual modules (Perceiver resampler, multiscale fusion, hybrid CNN+ViT) outperform the simpler masked cross-attention baseline?
+    \item \textbf{RQ3 (Training Strategy):} How much do curriculum learning, hard-example mining, and imbalance-aware weighting change report quality?
+    \item \textbf{RQ4 (Decoder Family):} Under the same organ-attention visual frontend, how do MedGemma, GPT-2, and BioBART compare?
+\end{itemize}
+
+The chapter first reports completed MedGemma ablations, then presents the decoder-comparison structure and current run-status diagnostics for GPT-2/BioBART.
+
+\section{Dataset and Data Preparation}\label{sec:exp_dataset}
+\subsection{CT-RATE Overview}
+All experiments use \textbf{CT-RATE}~\cite{hamamci2024foundation}, a large-scale 3D CT multimodal dataset with paired free-text reports and benchmark protocols for report generation and related tasks~\cite{hamamci2024generatect}.
 
 \begin{table}[htbp]
     \centering
-    \caption{CT-RATE statistics used in this thesis.}
+    \caption{CT-RATE dataset-level statistics used in this thesis.}
     \label{tab:ctrate_stats}
     \begin{tabular}{ll}
         \toprule
-        \textbf{Statistic} & \textbf{Value} \\ \midrule
+        \textbf{Statistic} & \textbf{Value} \\\midrule
         Total CT Volumes & 25,692 \\
         Unique Patients & 21,304 \\
-        Modality & 3D Chest CT \\
-        Text Modality & Findings + Impression \\ 
+        Modality & 3D chest CT \\
+        Text Modality & Findings + impression \\
+        Split Policy & Official train/validation/test split \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-\subsection{Preprocessing}
-We use a fixed preprocessing pipeline:
+\subsection{Preprocessing Protocol}
+We follow the unified preprocessing pipeline described in Chapter~\ref{chapter:methodology}:
 \begin{enumerate}
-    \item Intensity clipping and normalization in HU space.
-    \item Spatial normalization to a fixed volume shape.
-    \item Channel-first tensor layout for 3D encoder input.
-    \item LLM-based decomposition of reports into organ-specific text segments.
+    \item HU clipping and normalization,
+    \item spatial harmonization to $(112,256,352)$,
+    \item organ-mask extraction and stacking,
+    \item LLM-based report decomposition into organ sections.
 \end{enumerate}
 
-We use decomposed organ-level supervision for training and standard report-level reconstruction for evaluation.
+This ensures that architecture and decoder comparisons are not confounded by preprocessing differences.
 
-\section{Evaluation Metrics}\label{sec:evaluation_metrics}
-To assess the performance of our radiology report generation system we evaluate generated reports with multiple complementary metrics. Metrics are grouped by the type of signal they capture:
-
-\begin{enumerate}
-    \item \textbf{Surface-level (linguistic) metrics:} measure n-gram overlap and surface similarity to reference reports.
-    \item \textbf{Semantic / embedding-based metrics:} measure semantic similarity using contextual embeddings.
-    \item \textbf{Clinical / structured metrics:} evaluate clinical correctness by extracting findings, entities, relations or clinically-relevant labels.
-    \item \textbf{Human evaluation and statistical tests:} measure radiologist preference, clinical usefulness, and statistical significance.
-\end{enumerate}
-
-\subsection{Surface-level (Natural Language Generation) Metrics}
-These metrics are commonly used in image captioning and report generation benchmarks and capture lexical and syntactic similarity.
-
-\subsubsection{BLEU}
-BLEU \cite{papineni2002bleu} is an n-gram precision-based metric. For a candidate report $c$ and a set of references $\{r\}$, BLEU is computed as
-\begin{equation}
-    \text{BLEU} = \text{BP} \cdot \exp\!\left(\sum_{n=1}^{N} w_n \log p_n \right),
-\end{equation}
-where $p_n$ is the modified precision for $n$-grams, $w_n$ are weights (we use uniform weights $w_n = 1/N$), and BP is the brevity penalty:
-\begin{equation}
-    \text{BP} =
-    \begin{cases}
-        1 & \text{if } c_{len} > r_{len}^* \\
-        \exp\left(1 - \frac{r_{len}^*}{c_{len}} \right) & \text{otherwise}
-    \end{cases}
-\end{equation}
-Here $c_{len}$ is the candidate length and $r_{len}^*$ is the effective reference length (e.g., closest reference length). We report BLEU-4.
-
-\subsubsection{ROUGE-L}
-ROUGE-L \cite{lin2004rouge} uses the length of the Longest Common Subsequence (LCS) to capture sentence-level structure. Define
-\[
-R_{LCS} = \frac{\text{LCS}(c, r)}{|r|}, \qquad P_{LCS} = \frac{\text{LCS}(c, r)}{|c|},
-\]
-then the ROUGE-L F-measure is
-\begin{equation}
-F_{LCS} = \frac{(1+\beta^2) \, R_{LCS} \, P_{LCS}}{R_{LCS} + \beta^2 P_{LCS}},
-\end{equation}
-where $\beta$ weights recall relative to precision. In practice we set $\beta=1$ to report the balanced F$_1$ unless otherwise specified.
-
-\subsubsection{METEOR}
-METEOR \cite{banerjee2005meteor} aligns unigrams and computes a weighted harmonic mean of precision and recall that emphasizes recall. The core F$_{mean}$ is:
-\begin{equation}
-    F_{\text{mean}} = \frac{(1+\alpha) P R}{R + \alpha P},
-\end{equation}
-where typical METEOR uses $\alpha=9$ (equivalently $F_{\text{mean}} = \frac{10PR}{R + 9P}$). METEOR applies a fragmentation penalty:
-\begin{equation}
-    \text{Penalty} = 0.5 \left(\frac{\#\text{chunks}}{\#\text{matches}}\right)^3,
-\end{equation}
-and final score:
-\begin{equation}
-    \text{METEOR} = F_{\text{mean}} \cdot (1 - \text{Penalty}).
-\end{equation}
-
-\subsubsection{CIDEr}
-CIDEr \cite{vedantam2015cider} uses TF–IDF weighting for n-grams and computes average cosine similarity between a candidate's and references' TF–IDF vectors. For n-grams of length $n$:
-\begin{equation}
-    \text{CIDEr}_n(c, r) = \frac{1}{M}\sum_{i=1}^{M}
-    \frac{\mathbf{g}^n(c)\cdot \mathbf{g}^n(r_i)}
-             {\|\mathbf{g}^n(c)\| \, \|\mathbf{g}^n(r_i)\|},
-\end{equation}
-and final CIDEr is the (optionally IDF-normalized) average across $n=1\ldots4$.
-
-\vspace{2mm}
-\textbf{Notes:} Surface metrics are sensitive to wording and may penalize clinically-correct paraphrases. Use them together with semantic and clinical metrics.
-
-\subsection{Semantic / Embedding-based Metrics}
-These metrics capture deeper (contextual) semantic similarity beyond n-gram overlap.
-
-\subsubsection{BERTScore}
-BERTScore~\cite{zhang2019bertscore} compares contextual token embeddings between generated and reference reports and aggregates token-level similarities into precision, recall, and F1-style semantic similarity.
-
-\subsection{Clinical / Structured Metrics}
-These metrics aim to measure clinical correctness and the presence/absence of findings.
-
-\subsubsection{CheXbert}
-CheXbert \cite{smit2020chexbert} is a BERT-based labeler trained on the output of the CheXpert rule-based labeler to extract findings from radiology reports with higher accuracy. We use it to detect the presence of 14 standard observations (e.g., Cardiomegaly, Edema, Pneumonia, No Finding). We compute the Micro-F$_1$ score across all 14 classes to measure the clinical accuracy of the generated reports compared to the ground truth.
-
-\subsubsection{RadGraph}
-RadGraph \cite{jain2021radgraph} converts radiology reports into knowledge graphs (entities and relations). Evaluation is done by measuring overlap between predicted and reference graphs; typical metrics are node (entity) Precision/Recall/F$_1$ and edge (relation) Precision/Recall/F$_1$. Reporting both entity-level and relation-level scores helps diagnose whether models miss or hallucinate links between findings and anatomy.
-
-\subsubsection{SRR-BERT / Structured-report metrics}
-SRR-BERT and similar methods fine-tune BERT-like encoders to score structured-report correctness; they are useful for fine-grained disease classification and structured-report components. Report the metric(s) as provided by the original implementation (precision/recall/F$_1$ or regression correlation).
-
-\subsubsection{GREEN and other factuality metrics}
-GREEN (Generative Radiology report Evaluation and Error Notation) and related metrics are designed to highlight factual errors and categorize them by severity (critical vs non-critical). Use them to count clinically-significant hallucinations and factual inconsistencies.
-
-\subsubsection{Composite clinical metrics (e.g., RadCliQ)}
-Composite metrics such as RadCliQ combine surface (e.g., BLEU) and clinical (e.g., CheXpert) signals, often with learned weights to better correlate with radiologist judgments. When using a learned composite, report how weights were obtained and validate correlation with human raters.
-
-\section{Results}
-\subsection{A. Internal MedGemma Ablations (CT-RATE)}
-Table~\ref{tab:medgemma_ablation} reports core MedGemma-family ablations using the official aggregated results from \texttt{fvlm/rep\_medgemma/results\_retrain/global\_model\_comparison.csv}.
+\subsection{Effective Organ Coverage in Evaluation}
+A key property of decomposed chest-CT reporting is uneven organ coverage. Table~\ref{tab:organ_coverage_eval} reports per-organ matched-reference counts from the current best MedGemma evaluation file (same evaluation protocol used for metric computation). It highlights strong thoracic coverage and sparse upper-abdominal support.
 
 \begin{table}[htbp]
     \centering
-    \caption{Internal MedGemma ablations on CT-RATE test set (GLOBAL metrics).}
-    \label{tab:medgemma_ablation}
+    \caption{Per-organ coverage among matched validation samples used for metric computation (best MedGemma run).}
+    \label{tab:organ_coverage_eval}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Organ} & \textbf{N} & \textbf{Coverage (\% of GLOBAL=1563)} \\\midrule
+        Lung & 1562 & 99.94 \\
+        Heart & 1446 & 92.51 \\
+        Esophagus & 1353 & 86.56 \\
+        Trachea & 1411 & 90.28 \\
+        Aorta & 867 & 55.47 \\
+        Liver & 850 & 54.38 \\
+        Kidney & 280 & 17.91 \\
+        Gallbladder & 153 & 9.79 \\
+        Spleen & 146 & 9.34 \\
+        Rib & 117 & 7.49 \\
+        Pancreas & 57 & 3.65 \\
+        Stomach & 20 & 1.28 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+This long-tail support distribution is important for interpreting organ-level ablations and metric variance.
+
+\section{Experimental Setup}\label{sec:exp_setup}
+\subsection{Implementation Stack}
+Training and evaluation are implemented in PyTorch + HuggingFace Transformers + MONAI. Metrics are computed with a unified RadEval-based pipeline (plus fallback METEOR/CIDEr implementations) and exported to standardized \texttt{metrics\_final.csv} artifacts.
+
+\subsection{Common Optimization Settings}
+To keep comparisons consistent, major MedGemma-family runs share the same optimization scaffold. Table~\ref{tab:training_defaults} summarizes the default configuration.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Shared optimization defaults across main retraining runs.}
+    \label{tab:training_defaults}
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Value} \\\midrule
+        Per-device batch size & 1 \\
+        Gradient accumulation & 8 \\
+        Learning rate & $1\times10^{-4}$ \\
+        Weight decay & 0.01 \\
+        Warmup ratio & 0.05 \\
+        Epochs (retrain stage) & 2 \\
+        Precision & bf16 \\
+        Gradient checkpointing & Enabled \\
+        Save/eval frequency & Every 200 steps \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Model Families and Ablation Axes}
+Table~\ref{tab:ablation_axes} defines the ablation axes used in this chapter.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Ablation axes and evaluated variants.}
+    \label{tab:ablation_axes}
+    \begin{tabular}{p{3.1cm}p{10.8cm}}
+        \toprule
+        \textbf{Axis} & \textbf{Variants} \\\midrule
+        Token/bridge design & \texttt{medical\_vlm\_8\_tokens\_full}, \texttt{medgemma\_lora\_vis\_token\_pos\_embed}, \texttt{medical\_vlm\_8\_tokens\_full\_maxpool} \\
+        Encoder architecture & \texttt{perceiver\_resampler}, \texttt{multiscale\_vit\_fpn}, \texttt{medgemma\_architecture\_v3} \\
+        Training strategy & \texttt{curriculum\_learning}, \texttt{hard\_example\_mining}, \texttt{lora\_with\_vis\_tokens\_pos\_embed\_undersampling}, \texttt{lora\_with\_vis\_tokens\_pos\_embed\_weight\_loss} \\
+        Decoder family & MedGemma, GPT-2, BioBART under shared organ-attention frontend \\
+        External contextual baseline & fVLM~\cite{shui2025fvlm} (separate protocol, not directly row-wise comparable) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Evaluation Metrics}\label{sec:evaluation_metrics}
+We report complementary metrics grouped by linguistic overlap, semantic similarity, and clinical fidelity. This multi-view evaluation is necessary because lexical overlap alone can be misleading in radiology text generation.
+
+\subsection{Surface-level (Natural Language Generation) Metrics}
+\subsubsection{BLEU}
+BLEU~\cite{papineni2002bleu} is an n-gram precision-based score. For candidate report $c$ and references $\{r\}$:
+\begin{equation}
+    \mathrm{BLEU} = \mathrm{BP}\cdot \exp\!\left(\sum_{n=1}^{N} w_n \log p_n\right),
+\end{equation}
+where $p_n$ is modified n-gram precision, $w_n$ are n-gram weights, and BP is the brevity penalty:
+\begin{equation}
+    \mathrm{BP}=\begin{cases}
+        1 & c_{len} > r_{len}^* \\
+        \exp\left(1-\frac{r_{len}^*}{c_{len}}\right) & \text{otherwise.}
+    \end{cases}
+\end{equation}
+We report BLEU-4.
+
+\subsubsection{ROUGE-L}
+ROUGE-L~\cite{lin2004rouge} uses longest common subsequence (LCS):
+\[
+R_{LCS}=\frac{\mathrm{LCS}(c,r)}{|r|},\qquad
+P_{LCS}=\frac{\mathrm{LCS}(c,r)}{|c|},
+\]
+\begin{equation}
+F_{LCS}=\frac{(1+\beta^2)R_{LCS}P_{LCS}}{R_{LCS}+\beta^2P_{LCS}}.
+\end{equation}
+
+\subsubsection{METEOR}
+METEOR~\cite{banerjee2005meteor} computes a recall-oriented harmonic mean with a fragmentation penalty:
+\begin{equation}
+F_{\mathrm{mean}}=\frac{(1+\alpha)PR}{R+\alpha P},
+\end{equation}
+\begin{equation}
+\mathrm{METEOR}=F_{\mathrm{mean}}\cdot (1-\mathrm{Penalty}).
+\end{equation}
+
+\subsubsection{CIDEr}
+CIDEr~\cite{vedantam2015cider} compares TF-IDF-weighted n-gram vectors:
+\begin{equation}
+\mathrm{CIDEr}_n(c,r)=\frac{1}{M}\sum_{i=1}^{M}
+\frac{\mathbf{g}^n(c)\cdot\mathbf{g}^n(r_i)}{\|\mathbf{g}^n(c)\|\|\mathbf{g}^n(r_i)\|}.
+\end{equation}
+
+\subsection{Semantic Metric}
+\subsubsection{BERTScore}
+BERTScore~\cite{zhang2019bertscore} measures contextual embedding similarity between candidate and reference tokens and aggregates precision/recall/F1-style semantic overlap.
+
+\subsection{Clinical and Structured Metrics}
+\subsubsection{CheXbert}
+CheXbert~\cite{smit2020chexbert} evaluates alignment on clinically meaningful observation labels (reported as micro-F1 summary in this chapter).
+
+\subsubsection{RadGraph}
+RadGraph~\cite{jain2021radgraph} evaluates overlap of extracted radiology entities and relations between generated and reference reports.
+
+\subsubsection{GREEN}
+GREEN~\cite{ostmeier2024green} targets factual consistency and clinically meaningful error sensitivity in generated radiology text.
+
+\subsubsection{RadCliQ}
+RadCliQ~\cite{yu2023radcliq} is a composite clinical metric designed to correlate better with human radiology judgment than pure lexical overlap.
+
+\subsubsection{SRR-BERT}
+SRR-BERT-style structured-report scoring is used as an additional clinically informed signal in our evaluation exports.
+
+\subsection{Metric Interpretation Policy}
+In this thesis, metric interpretation is anchored on GREEN, RadGraph, and report-level lexical-semantic metrics together. CheXbert is still reported, but interpreted cautiously for organ-decomposed CT text because it was designed around full-report label extraction workflows.
+
+\section{Automatic Evaluation Pipeline and Artifact Standardization}\label{sec:exp_eval_pipeline}
+\subsection{Pipeline}
+For each model checkpoint:
+\begin{enumerate}
+    \item Generate organ-wise reports and save \texttt{generated\_reports.csv} (or \texttt{generated\_reports\_gemma.csv}).
+    \item Compute metrics with unified \texttt{radeval\_metrics.py}.
+    \item Export standardized \texttt{metrics\_final.csv} containing GLOBAL and per-organ rows.
+\end{enumerate}
+
+\subsection{Metric Key Mapping}
+The evaluation script maps RadEval keys into thesis column names (e.g., \texttt{green} $\to$ GREEN, \texttt{radgraph\_simple} $\to$ RadGraph, \texttt{radcliq-v1} $\to$ RadCliQ). This removes ambiguity when combining results from different variants.
+
+\subsection{Source-of-Truth Policy for This Chapter}
+\begin{itemize}
+    \item MedGemma ablations: \texttt{fvlm/rep\_medgemma/results\_retrain/global\_model\_comparison.csv}.
+    \item Decoder comparison: official \texttt{rep\_vision\_organ\_attention/results/gpt2\_v3} and \texttt{.../biobart\_v3} outputs.
+    \item External baseline: fVLM paper statistics~\cite{shui2025fvlm} in a separate contextual block.
+\end{itemize}
+
+\section{Results: Internal MedGemma Ablations}\label{sec:exp_medgemma_results}
+\subsection{Primary Ablation Table}
+Table~\ref{tab:medgemma_ablation_main} reports the main MedGemma-family comparison used in the thesis narrative.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Core MedGemma ablations on CT-RATE validation set (GLOBAL metrics).}
+    \label{tab:medgemma_ablation_main}
     \resizebox{\textwidth}{!}{%
     \begin{tabular}{lcccccccccc}
         \toprule
-        \textbf{Model} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{METEOR} & \textbf{ROUGE-L} & \textbf{CIDEr} & \textbf{BERTScore} & \textbf{RadGraph} & \textbf{CheXbert} & \textbf{RadCliQ} & \textbf{SRR-BERT} \\ \midrule
-        medical\_vlm\_8\_tokens\_full (baseline) & 0.323 & 0.092 & 0.328 & 0.341 & 0.041 & 0.567 & 0.243 & 0.239 & 1.037 & 0.330 \\
+        \textbf{Model} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{METEOR} & \textbf{ROUGE-L} & \textbf{CIDEr} & \textbf{BERTScore} & \textbf{RadGraph} & \textbf{CheXbert} & \textbf{RadCliQ} & \textbf{SRR-BERT} \\\midrule
+        medical\_vlm\_8\_tokens\_full (baseline) & 0.323 & 0.092 & 0.328 & 0.341 & 0.041 & 0.567 & 0.243 & 0.239 & 1.037 & \textbf{0.330} \\
         medgemma\_lora\_vis\_token\_pos\_embed (best) & \textbf{0.348} & \textbf{0.105} & \textbf{0.344} & \textbf{0.379} & \textbf{0.084} & \textbf{0.596} & \textbf{0.268} & 0.026 & \textbf{1.104} & 0.324 \\
         multiscale\_vit\_fpn & 0.327 & 0.086 & 0.322 & 0.337 & 0.043 & 0.566 & 0.242 & 0.241 & 1.022 & 0.326 \\
         perceiver\_resampler & 0.316 & 0.082 & 0.317 & 0.333 & 0.036 & 0.564 & 0.236 & 0.221 & 1.008 & 0.308 \\
         medgemma\_architecture\_v3 & 0.313 & 0.083 & 0.318 & 0.335 & 0.030 & 0.564 & 0.242 & 0.206 & 1.007 & 0.301 \\
-        curriculum\_learning & 0.194 & 0.032 & 0.250 & 0.250 & 0.018 & 0.507 & 0.133 & 0.269 & 0.773 & 0.322 \\
+        curriculum\_learning & 0.194 & 0.032 & 0.250 & 0.250 & 0.018 & 0.507 & 0.133 & \textbf{0.269} & 0.773 & 0.322 \\
         \bottomrule
     \end{tabular}
     }
 \end{table}
 
-The strongest result is obtained by the single-token organ representation with positional embedding, while curriculum training performs worst among tested variants.
-
-\subsection{B. Decoder Comparison (CT-RATE, Core Axis)}
-Decoder-family comparison is a central part of this thesis. Table~\ref{tab:decoder_comparison} is the final comparison template used for MedGemma, GPT-2, and BioBART under the same organ-attention pipeline.
+\subsection{Full Variant Matrix}
+For completeness, Table~\ref{tab:medgemma_ablation_full} reports all currently aggregated retraining variants.
 
 \begin{table}[htbp]
     \centering
-    \caption{Decoder comparison on CT-RATE. GPT-2/BioBART rows will be filled from the official \texttt{rep\_vision\_organ\_attention} runs once \texttt{metrics\_final.csv} is generated.}
+    \caption{Full MedGemma retraining matrix (GLOBAL rows from official aggregate file).}
+    \label{tab:medgemma_ablation_full}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{lcccccccccc}
+        \toprule
+        \textbf{Model} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{METEOR} & \textbf{ROUGE-L} & \textbf{CIDEr} & \textbf{BERTScore} & \textbf{RadGraph} & \textbf{CheXbert} & \textbf{RadCliQ} & \textbf{SRR-BERT} \\\midrule
+        curriculum\_learning & 0.194 & 0.032 & 0.250 & 0.250 & 0.018 & 0.507 & 0.133 & 0.269 & 0.773 & 0.322 \\
+        hard\_example\_mining & 0.316 & 0.083 & 0.319 & 0.332 & 0.043 & 0.563 & 0.237 & 0.198 & 0.999 & 0.307 \\
+        lora\_with\_vis\_tokens\_pos\_embed\_undersampling & 0.318 & 0.082 & 0.316 & 0.334 & 0.028 & 0.563 & 0.237 & 0.203 & 1.000 & 0.297 \\
+        lora\_with\_vis\_tokens\_pos\_embed\_weight\_loss & 0.298 & 0.063 & 0.294 & 0.316 & 0.025 & 0.555 & 0.214 & 0.199 & 0.952 & 0.293 \\
+        medgemma\_alignment\_v1 & 0.313 & 0.083 & 0.318 & 0.332 & 0.032 & 0.564 & 0.238 & 0.216 & 1.007 & 0.316 \\
+        medgemma\_architecture\_v3 & 0.313 & 0.083 & 0.318 & 0.335 & 0.030 & 0.564 & 0.242 & 0.206 & 1.007 & 0.301 \\
+        medgemma\_lora\_vis\_token\_pos\_embed & \textbf{0.348} & \textbf{0.105} & \textbf{0.344} & \textbf{0.379} & \textbf{0.084} & \textbf{0.596} & \textbf{0.268} & 0.026 & \textbf{1.104} & 0.324 \\
+        medical\_vlm\_8\_tokens\_full & 0.323 & 0.092 & 0.328 & 0.341 & 0.041 & 0.567 & 0.243 & 0.239 & 1.037 & \textbf{0.330} \\
+        medical\_vlm\_8\_tokens\_full\_maxpool & 0.320 & 0.086 & 0.322 & 0.338 & 0.035 & 0.566 & 0.241 & 0.213 & 1.020 & 0.316 \\
+        multiscale\_vit\_fpn & 0.327 & 0.086 & 0.322 & 0.337 & 0.043 & 0.566 & 0.242 & \textbf{0.241} & 1.022 & 0.326 \\
+        perceiver\_resampler & 0.316 & 0.082 & 0.317 & 0.333 & 0.036 & 0.564 & 0.236 & 0.221 & 1.008 & 0.308 \\
+        \bottomrule
+    \end{tabular}
+    }
+\end{table}
+
+\subsection{Relative Gains vs Baseline}
+Table~\ref{tab:delta_vs_baseline} summarizes the largest practical gains using
+\texttt{medical\_vlm\_8\_tokens\_full} as reference.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Delta against baseline (GLOBAL metrics). Positive is better.}
+    \label{tab:delta_vs_baseline}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Model} & $\Delta$GREEN & $\Delta$BLEU-4 & $\Delta$RadGraph & $\Delta$RadCliQ \\\midrule
+        medgemma\_lora\_vis\_token\_pos\_embed & +0.0249 & +0.0131 & +0.0250 & +0.0668 \\
+        multiscale\_vit\_fpn & +0.0045 & -0.0065 & -0.0015 & -0.0156 \\
+        perceiver\_resampler & -0.0070 & -0.0099 & -0.0068 & -0.0298 \\
+        medgemma\_architecture\_v3 & -0.0097 & -0.0098 & -0.0009 & -0.0302 \\
+        hard\_example\_mining & -0.0071 & -0.0088 & -0.0064 & -0.0386 \\
+        curriculum\_learning & -0.1286 & -0.0602 & -0.1100 & -0.2647 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Interpretation by Ablation Axis}
+\textbf{Token/bridge design:}
+The positional + sentinel visual-prefix variant gives the strongest global gains across GREEN, BLEU-4, METEOR, ROUGE-L, CIDEr, BERTScore, RadGraph, and RadCliQ. Relative to the baseline, gains include +7.7\% GREEN, +14.2\% BLEU-4, +11.1\% ROUGE-L, and +10.3\% RadGraph.
+
+\textbf{Encoder-side complexity:}
+Perceiver and multiscale variants do not consistently beat the simpler baseline under the current training budget. Multiscale slightly improves GREEN but loses in most lexical/graph metrics. Perceiver underperforms broadly, suggesting optimization cost may outweigh representational benefit in this setup.
+
+\textbf{Training strategy interventions:}
+Hard-example mining and default-text undersampling are competitive but below baseline on core global metrics. Curriculum learning drops substantially across almost all metrics in this two-phase configuration.
+
+\textbf{Metric disagreement:}
+The best global model has very low CheXbert despite improvements in GREEN/RadGraph and lexical-semantic metrics. This confirms that single-metric conclusions are risky for decomposed organ-wise CT text. In this thesis we prioritize GREEN + RadGraph + lexical-semantic agreement for model ranking.
+
+\section{Organ-Level Analysis}\label{sec:exp_organ_level}
+Table~\ref{tab:best_model_organs} reports organ-level metrics for the best MedGemma variant on selected organs with moderate/high support.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Best MedGemma variant: selected organ-level metrics.}
+    \label{tab:best_model_organs}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Organ} & \textbf{N} & \textbf{GREEN} & \textbf{RadGraph} & \textbf{CheXbert} \\\midrule
+        LUNG & 1562 & 0.169 & 0.074 & 0.060 \\
+        HEART & 1446 & 0.626 & 0.502 & 0.000 \\
+        ESOPHAGUS & 1353 & 0.651 & 0.426 & 0.831 \\
+        TRACHEA & 1411 & 0.817 & 0.318 & 0.957 \\
+        AORTA & 867 & 0.351 & 0.125 & 0.636 \\
+        LIVER & 850 & 0.561 & 0.593 & 0.690 \\
+        KIDNEY & 280 & 0.134 & 0.220 & 0.403 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Observed behavior is not uniform across organs. Thoracic organs with strong training support (heart/trachea/esophagus) show stronger GREEN and RadGraph than sparse organs. Very low-support organs (e.g., stomach, pancreas) are noisier and should be interpreted with caution.
+
+\section{Cross-Attention Activation Case Studies}\label{sec:exp_attention_case_studies}
+To complement the quantitative metrics, we include qualitative cross-attention case studies. Attention maps are extracted with the project visualization pipeline in \texttt{fvlm/rep\_medgemma/visualize\_attention.py}. For each organ, query-level attention is aggregated (8 query tokens per organ in multi-token settings), upsampled back to CT resolution, and overlaid on axial/coronal/sagittal slices together with the corresponding ground-truth organ mask.
+
+These visualizations are used to analyze three behaviors:
+\begin{enumerate}
+    \item spatial focus quality (organ-focused vs diffuse attention),
+    \item robustness under complex pathology and multi-organ abnormalities,
+    \item architectural differences between baseline and enhanced variants.
+\end{enumerate}
+
+\subsection{Case Study A: Typical Thoracic Pattern}
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \IfFileExists{figures/attention/caseA_baseline.png}{
+            \includegraphics[width=\linewidth]{figures/attention/caseA_baseline.png}
+        }{
+            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Placeholder\\Case A -- Baseline attention map\\(\texttt{medical\_vlm\_8\_tokens\_full})}}
+        }
+        \caption*{(a) Baseline model}
+    \end{minipage}\hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \IfFileExists{figures/attention/caseA_best.png}{
+            \includegraphics[width=\linewidth]{figures/attention/caseA_best.png}
+        }{
+            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Placeholder\\Case A -- Best model attention map\\(\texttt{medgemma\_lora\_vis\_token\_pos\_embed})}}
+        }
+        \caption*{(b) Best MedGemma variant}
+    \end{minipage}
+    \caption{Case Study A (thoracic-dominant exam): baseline vs best model cross-attention overlays.}
+    \label{fig:caseA_attention}
+\end{figure}
+
+In this category, expected behavior is concentrated activation around lung parenchyma, mediastinal structures, and airway regions depending on the queried organ. Compared to baseline, the best model is expected to show tighter organ boundaries and lower background spillover, consistent with improved GREEN and RadGraph scores.
+
+\subsection{Case Study B: Multi-Region Findings with Upper-Abdominal Context}
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \IfFileExists{figures/attention/caseB_baseline.png}{
+            \includegraphics[width=\linewidth]{figures/attention/caseB_baseline.png}
+        }{
+            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Placeholder\\Case B -- Baseline attention map\\(thorax + upper abdomen visible)}}
+        }
+        \caption*{(a) Baseline model}
+    \end{minipage}\hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \IfFileExists{figures/attention/caseB_best.png}{
+            \includegraphics[width=\linewidth]{figures/attention/caseB_best.png}
+        }{
+            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Placeholder\\Case B -- Best model attention map\\(thorax + upper abdomen visible)}}
+        }
+        \caption*{(b) Best MedGemma variant}
+    \end{minipage}
+    \caption{Case Study B: comparison under mixed thoracic and upper-abdominal findings.}
+    \label{fig:caseB_attention}
+\end{figure}
+
+This case type is particularly important for this thesis because organ visibility is uneven in chest CT. Useful qualitative evidence here is whether attention remains anatomically plausible for partially visible organs (e.g., liver/kidney dome) without collapsing into unrelated thoracic regions.
+
+\subsection{Case Study C: Architectural Comparison (Baseline vs Perceiver/Multiscale)}
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.31\textwidth}
+        \centering
+        \IfFileExists{figures/attention/caseC_baseline.png}{
+            \includegraphics[width=\linewidth]{figures/attention/caseC_baseline.png}
+        }{
+            \fbox{\parbox[c][4.9cm][c]{0.94\linewidth}{\centering Placeholder\\Case C baseline}}
+        }
+        \caption*{(a) Baseline}
+    \end{minipage}\hfill
+    \begin{minipage}{0.31\textwidth}
+        \centering
+        \IfFileExists{figures/attention/caseC_perceiver.png}{
+            \includegraphics[width=\linewidth]{figures/attention/caseC_perceiver.png}
+        }{
+            \fbox{\parbox[c][4.9cm][c]{0.94\linewidth}{\centering Placeholder\\Case C perceiver}}
+        }
+        \caption*{(b) Perceiver}
+    \end{minipage}\hfill
+    \begin{minipage}{0.31\textwidth}
+        \centering
+        \IfFileExists{figures/attention/caseC_multiscale.png}{
+            \includegraphics[width=\linewidth]{figures/attention/caseC_multiscale.png}
+        }{
+            \fbox{\parbox[c][4.9cm][c]{0.94\linewidth}{\centering Placeholder\\Case C multiscale}}
+        }
+        \caption*{(c) Multiscale}
+    \end{minipage}
+    \caption{Case Study C: qualitative comparison of attention behavior across architecture variants.}
+    \label{fig:caseC_attention}
+\end{figure}
+
+These panels are intended to explain why heavier architectures may not always improve global metrics. If attention becomes more diffuse or unstable across slices despite increased model capacity, this can reduce factual consistency at report level even when local feature extraction is richer.
+
+\subsection{How to Read the Attention Maps}
+For each case, we recommend reading the overlays with the following checklist:
+\begin{enumerate}
+    \item Does the queried organ attention coincide with the organ mask footprint?
+    \item Are high-intensity regions anatomically contiguous or scattered?
+    \item Is attention stable across axial/coronal/sagittal views?
+    \item Are false activations concentrated in clinically confounding neighboring structures?
+\end{enumerate}
+
+This qualitative protocol will be used together with the quantitative ablations in Section~\ref{sec:exp_medgemma_results} to build a coherent explanation of model behavior.
+
+\section{Decoder Comparison (Core Axis)}\label{sec:exp_decoder_axis}
+\subsection{Main Comparison Table Structure}
+Decoder family comparison is a central component of this thesis. The final table uses the same metric columns as MedGemma ablations.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Decoder comparison on CT-RATE under shared organ-attention frontend.}
     \label{tab:decoder_comparison}
     \resizebox{\textwidth}{!}{%
     \begin{tabular}{lcccccccccc}
         \toprule
-        \textbf{Decoder} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{METEOR} & \textbf{ROUGE-L} & \textbf{CIDEr} & \textbf{BERTScore} & \textbf{RadGraph} & \textbf{CheXbert} & \textbf{RadCliQ} & \textbf{SRR-BERT} \\ \midrule
+        \textbf{Decoder} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{METEOR} & \textbf{ROUGE-L} & \textbf{CIDEr} & \textbf{BERTScore} & \textbf{RadGraph} & \textbf{CheXbert} & \textbf{RadCliQ} & \textbf{SRR-BERT} \\\midrule
         MedGemma (best variant) & 0.348 & 0.105 & 0.344 & 0.379 & 0.084 & 0.596 & 0.268 & 0.026 & 1.104 & 0.324 \\
-        GPT-2 (rep\_vision\_organ\_attention/results/gpt2\_v3) & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
-        BioBART (rep\_vision\_organ\_attention/results/biobart\_v3) & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+        GPT-2 (\texttt{results/gpt2\_v3}) & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+        BioBART (\texttt{results/biobart\_v3}) & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
         \bottomrule
     \end{tabular}
     }
 \end{table}
 
-To keep the comparison protocol consistent, GPT-2 and BioBART metrics are taken only from the official organ-attention evaluation outputs (\texttt{generated\_reports.csv} + \texttt{metrics\_final.csv}) and not from older fragmented experiment folders.
+GPT-2 and BioBART are treated as core comparison models (not future work). Their official generated report files are already present, and the final metric rows will be inserted immediately after standardized metric extraction for the current v3 outputs (expected March 3, 2026).
 
-\subsection{C. External fVLM Baseline (Contextual, Not Directly Comparable)}
-We additionally report fVLM~\cite{shui2025fvlm} as an external baseline reference. This baseline is contextual only: training data, preprocessing, and evaluation protocol differ from our internal CT-RATE setup.
+\subsection{Current Run-Status Diagnostics (Before Final Metric Pass)}
+To avoid mixing unofficial outputs, we performed only structural sanity checks on the official v3 generated reports. Table~\ref{tab:decoder_sanity} summarizes those diagnostics.
 
 \begin{table}[htbp]
     \centering
-    \caption{External baseline reference. Values should be read as paper-reported context, not direct row-wise comparison with internal CT-RATE runs.}
-    \label{tab:external_fvlm}
-    \begin{tabular}{p{2.6cm}p{3.2cm}p{6.2cm}}
+    \caption{Decoder run-status diagnostics from official generated report files (not final quality metrics).}
+    \label{tab:decoder_sanity}
+    \begin{tabular}{lcccc}
         \toprule
-        \textbf{Model} & \textbf{Protocol} & \textbf{Interpretation in this thesis} \\ \midrule
-        fVLM~\cite{shui2025fvlm} & Large-scale fine-grained CT VLM pretraining (paper setting) & Used as external reference point for report-generation performance trends and organ-aware supervision design. \\
+        \textbf{Decoder} & \textbf{Samples} & \textbf{Avg words/report} & \textbf{Avg organ headers} & \textbf{12-header completeness (\%)} \\\midrule
+        MedGemma best & 1564 & 157.9 & 12.00 & 100.00 \\
+        GPT-2 v3 & 1563 & 435.0 & 5.29 & 0.38 \\
+        BioBART v3 & 1563 & 357.8 & 5.29 & 0.38 \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-\subsection{Discussion of Metric Behavior}
-During internal ablations, we observe that CheXbert can be unstable for organ-decomposed CT reports, consistent with the fact that CheXbert was designed for full chest-report style labeling. Therefore, we prioritize GREEN and RadGraph when interpreting clinical faithfulness in this organ-conditioned setting.
+These diagnostics indicate that current GPT-2/BioBART outputs are structurally less stable than MedGemma outputs (longer reports, fewer valid organ headers). Final quantitative conclusions for RQ4 will therefore rely on the standardized metric pass rather than on qualitative impressions alone.
+
+\section{External Baseline: fVLM (Contextual)}\label{sec:exp_fvlm}
+We include fVLM~\cite{shui2025fvlm} as an external contextual baseline because it is directly relevant to fine-grained CT vision-language pretraining. However, the fVLM paper uses a different training/evaluation protocol than this thesis setup.
+
+\begin{table}[htbp]
+    \centering
+    \caption{External baseline usage policy.}
+    \label{tab:external_fvlm}
+    \begin{tabular}{p{2.6cm}p{3.4cm}p{6.0cm}}
+        \toprule
+        \textbf{Model} & \textbf{Protocol} & \textbf{How it is used here} \\\midrule
+        fVLM~\cite{shui2025fvlm} & Paper-specific large-scale fine-grained CT VLM pretraining & Contextual reference for design motivation and expected performance range; not used as a direct row-wise comparator to internal CT-RATE runs. \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Extended Ablation Protocols for Final Chapter Version}\label{sec:exp_extended_protocols}
+To reach final chapter completeness, additional ablation slices are prepared with fixed analysis templates:
+
+\begin{enumerate}
+    \item \textbf{Token-count sweep:} compare 1-token, 4-token, and 8-token organ interfaces under same decoder and optimizer.
+    \item \textbf{Mask downsampling strategy:} area interpolation vs max-pooling for mask-to-token alignment.
+    \item \textbf{Bridge stabilization:} with/without variance matching and with/without visual positional embeddings.
+    \item \textbf{Loss composition:} pure LM vs LM+alignment for branches where alignment is implemented.
+    \item \textbf{Sampling policy:} uniform vs organ-weighted vs hard-example-weighted sampling.
+\end{enumerate}
+
+Each new ablation row will be integrated into Table~\ref{tab:medgemma_ablation_full} using the same metrics pipeline and artifact naming policy.
+
+\section{Threats to Validity and Interpretation Limits}\label{sec:exp_threats}
+\textbf{Dataset anatomy mismatch:}
+Chest CT does not uniformly cover all abdominal organs, creating support imbalance for organ-level generation and evaluation.
+
+\textbf{Metric-domain mismatch:}
+Some metrics (especially CheXbert) were developed for full-report chest labeling and may underrepresent quality in organ-decomposed, multi-organ CT narratives.
+
+\textbf{Protocol comparability:}
+External baselines such as fVLM are informative but not directly protocol-equivalent.
+
+\textbf{Decoder status timing:}
+As of March 2, 2026, MedGemma metrics are complete in the standardized pipeline, while GPT-2/BioBART v3 quantitative rows are pending final standardized metric generation from official output folders.
+
+\textbf{Human evaluation:}
+This chapter reports automated metrics only. Human evaluation and formal significance testing are not included in the current version and are therefore not used for claims.
+
+\section{Chapter Summary}\label{sec:exp_summary}
+The main empirical finding is consistent: under the current CT-RATE setup, MedGemma with positional visual prefixing is the strongest internal model across nearly all primary global metrics. Heavier encoder variants and training-schedule interventions did not surpass this setting in the current compute budget.
+
+Decoder-family comparison is established as a core axis with fixed data and metric interfaces; MedGemma values are finalized and GPT-2/BioBART rows are ready to be populated from the official v3 runs once their standardized metric pass is complete.

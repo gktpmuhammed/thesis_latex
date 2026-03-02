@@ -1,7 +1,60 @@
 \chapter{Conclusion and Future Work}\label{chapter:conclusion}
-\section{Section}
-Content goes here.
-\subsection{Subsection}
-More content goes here.
+
+\section{Conclusion}
+This thesis studied organ-aware radiology report generation from 3D chest CT with a unified vision-language pipeline. The core objective was to reduce the gap between rich volumetric information and decoder-side token constraints while preserving clinically meaningful report content.
+
+The implemented framework combined organ-level supervision via report decomposition, organ-conditioned visual token extraction, and decoder adaptation under a consistent evaluation protocol. The most complete evidence currently comes from the MedGemma family, where multiple architectural and training ablations were compared systematically.
+
+The main empirical conclusion is concise: in this setting, stable visual-language interfacing is more decisive than increasing architectural complexity. The strongest model variant used explicit visual-prefix structuring and delivered the most consistent improvements on the primary global metrics used in this thesis.
+
+Overall, the thesis contributes:
+\begin{itemize}
+    \item a reproducible end-to-end organ-aware 3D report generation setup,
+    \item code-grounded ablation evidence on interface, architecture, and training strategy,
+    \item a standardized evaluation workflow supporting multi-metric interpretation,
+    \item a near-complete cross-decoder comparison framework (MedGemma/GPT-2/BioBART).
+\end{itemize}
+
+The work therefore advances both method (how to structure the task) and practice (how to implement and evaluate it reliably).
+
+\section{Take-Home Messages}
+The thesis can be reduced to four practical takeaways:
+\begin{enumerate}
+    \item Organ-aware decomposition is not only a data-format choice; it is a training signal that makes failure analysis and controllable generation feasible.
+    \item In 3D CT report generation, token/interface design can matter more than adding architectural complexity.
+    \item Multi-metric evaluation is mandatory; single-metric optimization is too fragile for clinical text generation claims.
+    \item Reproducible artifact discipline (\texttt{generated\_reports*.csv} + \texttt{metrics\_final.csv}) is essential for trustworthy model comparison.
+\end{enumerate}
+
+These messages are intended to be directly reusable by future work in volumetric medical vision-language systems, independent of decoder brand or training infrastructure.
+
 \section{Future Work}
-asdasdhashdas
+Future work is prioritized in three tracks.
+
+\subsection{Track 1: Complete the Current Thesis Axis}
+\begin{enumerate}
+    \item Finalize standardized metric extraction for official GPT-2/BioBART v3 outputs and populate the decoder comparison table.
+    \item Insert finalized cross-attention case-study figures to complete the quantitative + qualitative evidence pair.
+    \item Add compact significance reporting (e.g., bootstrap confidence intervals) for key global metrics.
+\end{enumerate}
+This track is short-horizon and can be completed without redesigning the model stack. Its purpose is to close the evidence loop of the current thesis version.
+
+\subsection{Track 2: Improve Model Robustness and Efficiency}
+\begin{enumerate}
+    \item Run controlled token-budget sweeps (1/2/4/8 tokens per organ) under matched compute.
+    \item Explore organ-adaptive token allocation for long-tail organs.
+    \item Improve sparse-organ handling with uncertainty-aware generation and decomposition confidence weighting.
+    \item Study additional bridge regularization to reduce visual-text embedding drift.
+\end{enumerate}
+This track targets the main technical bottlenecks identified by the ablations: token efficiency, interface stability, and long-tail organ robustness.
+
+\subsection{Track 3: Strengthen Clinical Validity}
+\begin{enumerate}
+    \item Add human evaluation with radiologist-centered error taxonomy.
+    \item Expand evaluation to temporal/longitudinal scenarios and clinically realistic reading workflows.
+    \item Introduce safety-oriented post-generation checks for contradiction and hallucination control.
+\end{enumerate}
+This track is required for translational credibility. It shifts the system from benchmark-oriented progress to clinically meaningful utility and safety assessment.
+
+\section{Final Remark}
+The thesis shows that organ-aware 3D report generation is tractable when anatomical structure is treated as a first-class modeling constraint. With the current framework and results, the project is technically mature enough to complete cross-decoder benchmarking and move toward stronger clinical validation.
