@@ -1,131 +1,75 @@
 \chapter{Discussion}\label{chapter:discussion}
 
 \section{Discussion Scope}
-This chapter interprets the experimental outcomes beyond score reporting. Chapter~\ref{chapter:experiments} established the empirical results; here we explain why the observed ranking emerged, which findings are robust, which findings are conditional, and what methodological limits matter when reading the results.
+This chapter interprets the evidence from Chapter~\ref{chapter:experiments}. The goal is to explain why the observed ranking emerged, which conclusions are robust, and where claims should be bounded.
 
-The central pattern is that the best global performance was achieved by a model with a stable organ-conditioned interface to the decoder, not by the most complex visual architecture. This pattern is examined from architectural, optimization, evaluation, and clinical-readiness perspectives.
-
-\section{Why Interface Design Was the Dominant Lever}
+\section{Why Interface Design Dominated (Including Negative Ablations and Case-Study Evidence)}
 \subsection{Empirical Signal}
-The strongest model in the current experiments, \texttt{medgemma\_lora\_vis\_token\_pos\_embed}, improved the core global metrics simultaneously (GREEN, RadGraph, BLEU-4, ROUGE-L, BERTScore, RadCliQ) against the baseline. In contrast, most heavier variants produced mixed or negative deltas despite higher representational capacity.
-
-This is a non-trivial result: in many vision-language settings, larger modules often improve averages. Here, the opposite trend indicates that under 3D CT constraints the bottleneck is less about raw encoder expressiveness and more about how visual tokens are prepared and interpreted at the language interface.
+The strongest model, \texttt{medgemma\_lora\_vis\_token\_pos\_embed}, improves core global metrics (GREEN, RadGraph, BLEU-4, ROUGE-L, BERTScore, RadCliQ) over the baseline. By contrast, heavier variants show mixed or negative deltas despite higher nominal capacity.
 
 \subsection{Mechanistic Interpretation}
-Three components appear to matter most:
+Three interface components appear decisive:
 \begin{enumerate}
     \item explicit visual token delimitation (sentinel wrapping),
     \item consistent positional encoding over visual prefix tokens,
     \item stabilized projection into decoder embedding scale.
 \end{enumerate}
+Together they reduce ambiguity between visual context and textual instruction/response tokens.
 
-Together, these components reduce ambiguity in multimodal token semantics. The decoder can more reliably separate ``visual context'' from ``prompt and response text,'' which is critical in organ-wise generation where many short conditioned generations are produced per patient.
+\subsection{Negative Ablations in Context}
+Perceiver-style resampling and multiscale fusion are not intrinsically weak. Under the current low effective batch, long context, and short retraining budget, their additional complexity likely increases optimization burden more than it improves report-level factuality.
 
-\subsection{Implication for 3D Medical VLM Design}
-In this task family, architecture scaling should follow interface stabilization, not precede it. A practical order of operations is:
-\begin{enumerate}
-    \item stabilize visual prefix semantics,
-    \item verify organ grounding behavior,
-    \item only then increase architectural complexity.
-\end{enumerate}
+Curriculum and hard-example strategies also underperform the best interface variant. This indicates that weighting/sampling can refine learning but cannot fully compensate for an unstable vision-language interface.
 
-\section{Interpreting Negative or Mixed Ablations}
-\subsection{Perceiver and Multiscale Variants}
-Perceiver-style resampling and multiscale feature fusion were motivated by better long-range and multi-resolution modeling. Their underperformance in current global metrics does not imply they are universally ineffective. It indicates that, under the present optimization budget and data regime, their additional capacity was not converted into stronger report-level factuality.
+\subsection{Case-Study Support}
+Cross-attention overlays provide spatial evidence consistent with metric trends. When a model exhibits diffuse or anatomically implausible attention despite larger capacity, degraded factual metrics are easier to explain. This is why case studies are treated as supporting evidence for mechanism, not only as qualitative illustration.
 
-A likely cause is optimization burden: deeper fusion/resampling modules increase training instability sensitivity under low effective batch, long context, and short retraining schedules.
+\subsection{Design Implication}
+For this task family, the practical order is: stabilize the visual-language interface first, verify organ grounding, then scale architectural complexity.
 
-\subsection{Curriculum and Sampling Strategies}
-Curriculum learning and hard-example/sampling variants were intended to address data imbalance and ``easy normal'' dominance. The observed behavior suggests:
-\begin{itemize}
-    \item pathology-first curriculum can reduce robustness when switching back to the full mixed distribution,
-    \item hard-example emphasis helps targeted learning but may distort global distribution fit if not tightly calibrated,
-    \item weighting/sampling alone cannot compensate for a weak visual-language interface.
-\end{itemize}
-
-This reinforces that optimization policy is secondary to representation alignment in this setup.
-
-\section{Metric Disagreement and What to Trust}
-\subsection{Why Disagreement Appears}
-The evaluation combines lexical overlap, semantic similarity, and clinical/factual metrics. Disagreement is expected because these metrics reward different behaviors:
+\section{Metric Disagreement and Interpretation}
+Different metric families reward different behavior, so disagreement is expected:
 \begin{itemize}
     \item lexical metrics reward phrasing overlap,
     \item embedding metrics reward semantic proximity,
-    \item clinical metrics reward factual correctness and relation consistency.
+    \item clinical metrics reward factual and relational correctness.
 \end{itemize}
 
-A model can improve factual grounding while changing style, producing better GREEN/RadGraph but weaker label-style metrics for certain report formats.
+CheXbert remains useful but is not treated as the sole clinical proxy for organ-decomposed CT text. Consistent with Section~\ref{sec:evaluation_metrics}, model ranking prioritizes GREEN and RadGraph, then checks lexical-semantic coherence.
 
-\subsection{CheXbert in Organ-Decomposed CT Text}
-CheXbert remains useful but must be interpreted cautiously in this thesis context. It is optimized for full-report label extraction assumptions that do not perfectly match organ-decomposed generation style. Therefore, model ranking in this work prioritizes consistent improvements in GREEN + RadGraph + lexical-semantic bundle rather than optimizing a single clinical proxy.
-
-\subsection{Evaluation Policy Going Forward}
-For this project, a defensible selection rule is:
-\begin{enumerate}
-    \item require non-degrading factual metrics (GREEN/RadGraph),
-    \item require acceptable semantic/readability signal,
-    \item inspect qualitative case studies for anatomical plausibility.
-\end{enumerate}
-
-\section{Organ Coverage, Long-Tail Effects, and Generalization}
-The dataset is chest CT with partial upper-abdominal visibility. This creates class-support imbalance across organs. Consequences include:
+\section{Generalization and Organ Coverage}
+The chest-CT setting yields strong thoracic support and sparse support for several upper-abdominal organs. This long-tail distribution affects both training dynamics and evaluation variance:
 \begin{itemize}
-    \item noisier organ-level metrics for sparse organs,
-    \item higher risk of over-learning frequent thoracic patterns,
-    \item stronger dependence on template priors for low-support organs.
+    \item sparse organs have noisier metrics,
+    \item frequent thoracic patterns dominate global optimization,
+    \item template bias risk increases for low-support organs.
 \end{itemize}
+Accordingly, organ-level conclusions are most reliable for high-support organs and should be interpreted cautiously for very sparse ones.
 
-This is not only a data issue; it shapes model behavior. Architectures that appear stronger on high-support organs may still fail to generalize to sparse organ contexts if interface and uncertainty handling are weak.
+\section{Decoder Family Axis}
+The decoder-comparison protocol is now structurally fixed (shared frontend, shared metric pipeline, shared artifact policy). MedGemma rows are complete; GPT-2/BioBART rows are pending only final standardized metric extraction from official v3 outputs. The remaining work is numerical completion rather than methodological redesign.
 
-\section{Value of the Cross-Attention Case Studies}
-The attention-map case studies introduced in Chapter~\ref{chapter:experiments} are important because they connect metric trends to spatial behavior.
+\section{Relation to Prior Paradigms}
+Compared with many 2D report-generation settings, 3D CT introduces higher token pressure and stronger grounding demands. The results suggest that decoder scaling or heavier visual modules alone are insufficient if token semantics at the interface are not explicit and stable. This aligns with anatomy-guided trends in recent segmentation-aware and decomposition-aware literature.
 
-They answer questions that tables cannot:
-\begin{itemize}
-    \item Does the model attend within organ boundaries for the queried organ?
-    \item Is attention compact or diffusely spread over unrelated anatomy?
-    \item Do architectural changes improve localization stability across planes?
-\end{itemize}
-
-If a variant adds capacity but attention maps remain unstable or anatomically inconsistent, lower factual metrics become easier to explain. This qualitative evidence is therefore a core part of the argument, not supplementary decoration.
-
-\section{Decoder Axis: What Is Resolved and What Is Pending}
-The thesis now has a complete protocol for cross-decoder comparison (MedGemma, GPT-2, BioBART) with standardized artifact expectations. MedGemma results are finalized; GPT-2/BioBART official v3 generated reports are already available and await final standardized metric extraction for row-complete comparison.
-
-This means the decoder axis is methodologically solved and operationally near-complete. The remaining step is numerical completion, not conceptual redesign.
-
-\section{Relation to Prior Paradigms in Medical Report Generation}
-The results in this thesis also clarify how organ-aware 3D generation differs from many 2D report-generation paradigms. In 2D settings, stronger text modeling often compensates for weaker spatial grounding because image complexity is lower and report style is more standardized. In 3D CT, that compensation is weaker. Volumetric anatomical complexity, partial organ visibility, and long-range structural dependencies increase the cost of weak grounding.
-
-This explains why the interface-first result is meaningful beyond this specific implementation. It suggests that scaling multimodal capacity without explicit anatomical token semantics can plateau quickly in volumetric reporting tasks. By contrast, even moderate-capacity models can become strong performers when organ-specific conditioning is explicit, stable, and consistently evaluated.
-
-The findings are also compatible with segmentation-guided trends in prior work: when anatomy priors are integrated early and consistently, downstream text generation becomes easier to control. The contribution here is direct evidence under a full end-to-end report-generation workflow, not only representation-level analysis.
-
-\section{Validity and Reporting Discipline}
+\section{Validity and Limits}
 \subsection{Internal Validity}
-Internal validity is strongest for MedGemma-family comparisons because training/evaluation interfaces are consistent and metrics are standardized. It is weaker for claims about universal decoder superiority until GPT-2/BioBART final rows are inserted.
+Internal validity is strongest for MedGemma-family comparisons because data interfaces and evaluation pipelines are controlled. Decoder-family claims remain provisional until GPT-2/BioBART final metric rows are inserted.
 
 \subsection{External Validity}
-External validity is limited by task definition (organ-decomposed chest CT reporting) and dataset anatomy profile. Results should not be over-generalized to all imaging modalities or all report styles without controlled replication.
+Findings are specific to organ-decomposed chest-CT reporting and should not be over-generalized to other modalities or report styles without controlled replication.
 
 \subsection{Construct Validity}
-Construct validity depends on metric alignment to clinical goals. Using multiple metric families and adding qualitative attention analyses improves construct validity compared with single-metric reporting.
+Construct validity is strengthened by metric bundles plus case studies, but still depends on imperfect automatic metrics. Human expert evaluation remains outside the current chapter scope.
 
-\section{Practical Implications}
-For practitioners building similar systems, the experiments suggest a practical recipe:
+\section{Practical Implications and Synthesis}
+For practitioners, the evidence supports an interface-first recipe:
 \begin{enumerate}
-    \item start with explicit organ-conditioned supervision,
-    \item prioritize bridge/interface stability and token-role clarity,
-    \item run lightweight architecture ablations before expensive scaling,
+    \item use explicit organ-conditioned supervision,
+    \item stabilize visual prefix semantics and projection scale,
+    \item run lightweight ablations before heavy architectural scaling,
     \item use metric bundles plus qualitative spatial audits,
     \item separate protocol-matched internal comparisons from external contextual baselines.
 \end{enumerate}
 
-This recipe is directly reusable in other anatomy-grounded multimodal generation tasks.
-
-For thesis writing quality, this chapter boundary is also important: Chapter~4 should remain evidence-centric (what happened), while Discussion should carry causal interpretation (why it likely happened and where claims should be bounded). Keeping this separation reduces repetition and improves argument clarity.
-
-\section{Chapter Synthesis}
-The discussion supports a focused claim: for organ-aware 3D CT report generation under realistic compute constraints, interface calibration is the primary determinant of success, while architecture scaling and curriculum/sampling modifications are secondary and highly budget-dependent.
-
-This synthesis motivates the final thesis conclusion: the current framework is scientifically coherent, empirically supported, and close to completion on the decoder-comparison axis.
+Overall synthesis: under realistic compute constraints, interface calibration is the dominant success factor in this organ-aware 3D CT report-generation setup.

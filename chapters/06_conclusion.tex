@@ -42,9 +42,11 @@ This track is short-horizon and can be completed without redesigning the model s
 \subsection{Track 2: Improve Model Robustness and Efficiency}
 \begin{enumerate}
     \item Run controlled token-budget sweeps (1/2/4/8 tokens per organ) under matched compute.
-    \item Explore organ-adaptive token allocation for long-tail organs.
-    \item Improve sparse-organ handling with uncertainty-aware generation and decomposition confidence weighting.
-    \item Study additional bridge regularization to reduce visual-text embedding drift.
+    \item Compare mask downsampling strategies (area interpolation vs max-pooling) for mask-to-token alignment.
+    \item Ablate bridge stabilization choices (with/without variance matching and visual positional embeddings).
+    \item Compare loss composition (pure LM vs LM+alignment) on branches where alignment is implemented.
+    \item Compare sampling policies (uniform vs organ-weighted vs hard-example weighted).
+    \item Explore organ-adaptive token allocation and uncertainty-aware handling for sparse organs.
 \end{enumerate}
 This track targets the main technical bottlenecks identified by the ablations: token efficiency, interface stability, and long-tail organ robustness.
 

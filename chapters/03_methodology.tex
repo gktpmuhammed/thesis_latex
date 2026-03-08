@@ -1,48 +1,48 @@
 % !TeX root = ../main.tex
 \chapter{Methodology}\label{chapter:methodology}
 
-\section{Problem Formulation and Pipeline Overview}\label{sec:method_overview}
+\section{Pipeline Overview}\label{sec:method_overview}
 This thesis studies organ-aware report generation from 3D chest CT. The model input is a CT volume
-$V \in \mathbb{R}^{D \times H \times W}$, together with organ masks
-$\{M_o\}_{o \in \mathcal{O}}$ for a fixed organ set $\mathcal{O}$. The output is a structured report where each organ receives a dedicated text segment, and all segments are assembled into a final report for evaluation.
+$V \in \mathbb{R}^{D \times H \times W}$ together with organ masks
+$\{M_o\}_{o \in \mathcal{O}}$ for a fixed organ set $\mathcal{O}$. The output is an organ-structured report in which each organ receives a dedicated text segment.
 
-Formally, for patient $i$, we model:
+For patient $i$, we model:
 \begin{equation}
 \hat{Y}_i = f_\theta\!\left(V_i, \{M_{i,o}\}_{o \in \mathcal{O}}\right),
 \end{equation}
-where $\hat{Y}_i = \{\hat{y}_{i,o}\}_{o \in \mathcal{O}}$ contains organ-level generated text. We then build a report-level output by concatenating organ sections in a fixed anatomical order.
+where $\hat{Y}_i = \{\hat{y}_{i,o}\}_{o \in \mathcal{O}}$ denotes organ-level generated text. A report-level prediction is assembled by concatenating organ sections in a fixed anatomical order.
 
-The end-to-end pipeline contains six stages:
+The end-to-end workflow contains six stages:
 \begin{enumerate}
     \item CT preprocessing and mask preparation.
-    \item LLM-based decomposition of reference reports into organ-level supervision.
-    \item Organ-aware visual token extraction from a 3D ViT backbone.
-    \item Vision-language bridging into decoder embedding space.
-    \item Organ-conditioned autoregressive generation.
-    \item Organ-section assembly and report-level evaluation.
+    \item Report decomposition into organ-level supervision.
+    \item Organ-aware visual token extraction from a 3D ViT encoder.
+    \item Projection/bridging into decoder embedding space.
+    \item Organ-conditioned text generation.
+    \item Report assembly and metric computation.
 \end{enumerate}
 
-The same overall interface is used for three decoder families: MedGemma~\cite{yang2024medgemma}, GPT-2~\cite{radford2019language}, and BioBART~\cite{yuan2022biobart}. This keeps decoder comparison meaningful by controlling visual input structure and data protocol.
+The same interface is used across four decoder families: MedGemma~\cite{yang2024medgemma}, BERT-base~\cite{devlin2019bert}, GPT-2~\cite{radford2019language}, and BioBART~\cite{yuan2022biobart}.
 
-\section{Data Interfaces and Preprocessing}\label{sec:method_preprocess}
+\section{Data and Targets}\label{sec:method_data_targets}
 \subsection{Volume and Mask Preprocessing}
-The training and evaluation code uses a consistent MONAI-based transform stack across model families. Given raw NIfTI CT and segmentation volumes, preprocessing applies:
+The training and evaluation code uses a consistent MONAI-based transform stack. Given raw NIfTI CT and segmentation volumes, preprocessing applies:
 \begin{enumerate}
     \item channel standardization and axis transposition,
-    \item HU intensity clipping ($[-1150, 350]$) and min-max scaling to $[0,1]$,
-    \item spatial padding to $(112,256,352)$,
-    \item final resize to $(112,256,352)$ with trilinear interpolation for CT and nearest-neighbor for masks.
+    \item HU clipping ($[-1150, 350]$) and min-max normalization to $[0,1]$,
+    \item spatial harmonization to $(112,256,352)$ via padding/resizing,
+    \item trilinear interpolation for CT and nearest-neighbor interpolation for masks.
 \end{enumerate}
 
-This choice intentionally replaces center-cropping with resizing to reduce accidental removal of peripheral anatomy (especially small or partially visible structures).
+Replacing center-cropping with full-volume resizing reduces accidental exclusion of peripheral anatomy.
 
-\subsection{Target Organs and Segmentation-ID Mapping}
-The final training schema uses 12 target organs that are sufficiently represented in the decomposed reports and compatible with available segmentation labels:
+\subsection{Target Organ Set and Segmentation Mapping}
+The final schema uses 12 organs:
 \begin{equation}
 \mathcal{O} = \{\text{lung, heart, esophagus, liver, gallbladder, stomach, pancreas, spleen, kidney, aorta, trachea, rib}\}.
 \end{equation}
 
-Mask extraction in data loaders follows fixed integer-ID mappings. Table~\ref{tab:organ_id_mapping} summarizes the mapping used in training and evaluation scripts.
+Mask extraction follows fixed segmentation-ID mappings summarized in Table~\ref{tab:organ_id_mapping}.
 
 \begin{table}[htbp]
     \centering
@@ -67,195 +67,63 @@ Mask extraction in data loaders follows fixed integer-ID mappings. Table~\ref{ta
     \end{tabular}
 \end{table}
 
-\subsection{Chest-CT Visibility Caveat}
-Although the task is chest CT, several upper-abdominal organs are retained because they appear in a non-trivial fraction of scans. However, visibility is inconsistent across subjects and protocols. Therefore, organs with limited field-of-view support are treated as optional supervision targets rather than mandatory textual outputs.
-
-\section{Report Decomposition for Organ-Level Supervision}\label{sec:method_decomposition}
-\subsection{LLM-Based Structuring}
-Reference reports are decomposed into organ-keyed JSON records using an instruction-following LLM pipeline (Llama-3.3-70B-Instruct through vLLM~\cite{kwon2023efficient}, with AWQ quantization~\cite{lin2023awq}). The pipeline enforces:
+\subsection{Report Decomposition Targets}
+Reference reports are decomposed into organ-keyed JSON records using an instruction-following LLM pipeline (Llama-3.3-70B-Instruct via vLLM~\cite{kwon2023efficient}, with AWQ quantization~\cite{lin2023awq}). The decomposition enforces:
 \begin{enumerate}
-    \item strict schema-constrained JSON output,
-    \item one textual value per organ key,
-    \item explicit handling of missing organs as empty/null values.
+    \item schema-constrained JSON output,
+    \item one text field per organ key,
+    \item explicit empty/null handling for missing organs.
 \end{enumerate}
 
-This decomposition converts free-text report supervision into organ-conditioned generation targets and enables direct organ-level error analysis.
+This converts free-text supervision into organ-conditioned targets and enables organ-level error analysis.
 
-\subsection{Prompted Supervision Format}
-During training, each organ is paired with an organ-specific instruction prompt. In MedGemma branches, chat-format prompts are used:
-\begin{quote}
-\ttfamily <start\_of\_turn>user ... Describe the findings for the [organ] ... <start\_of\_turn>model
-\end{quote}
-For GPT-2/BioBART branches, a shorter prompt style is used (e.g., \texttt{Describe [organ]:}).
+During training, each organ is paired with an organ-specific prompt. MedGemma branches use chat-format prompts; BERT-base/GPT-2/BioBART branches use shorter textual prompts (e.g., \texttt{Describe [organ]:}). In all branches, loss is masked to the response region only.
 
-The loss is masked to the response region only; prompt tokens and padding tokens are ignored.
+\subsection{Chest-CT Visibility Caveat}
+Although the dataset modality is chest CT, several upper-abdominal organs appear in a non-trivial subset of scans. Visibility remains inconsistent across patients and protocols, so sparse organs are treated as optional supervision targets rather than mandatory output constraints.
 
-\section{Organ-Aware Visual Encoding}\label{sec:method_visual_encoder}
-\subsection{Backbone}
-All main variants use a 3D ViT encoder initialized from a pretrained checkpoint and fine-tuned end-to-end. The standard configuration operates on $(112,256,352)$ volumes with patch size $(16,16,32)$ and hidden size 768.
+\section{Model Architecture}\label{sec:method_architecture}
+\subsection{3D Visual Backbone}
+All principal variants use a 3D ViT encoder initialized from pretrained weights and fine-tuned end-to-end. The standard configuration uses input size $(112,256,352)$, patch size $(16,16,32)$, and hidden size 768.
 
-Some ablations modify this backbone (e.g., CNN stem before ViT, multiscale fusion), but the output interface to the language side remains organ-conditioned tokens.
+\subsection{Organ Queries and Masked Cross-Attention}
+Let $F(V) \in \mathbb{R}^{T \times d_v}$ be ViT token features and $Q_o \in \mathbb{R}^{K \times d_v}$ be learned queries for organ $o$. Organ masks are downsampled to the ViT token grid and converted into additive attention bias $B_o$ that blocks background tokens.
 
-\subsection{Masked Cross-Attention with Organ Queries}
-Let $F(V) \in \mathbb{R}^{T \times d_v}$ be ViT features and $Q_o \in \mathbb{R}^{K \times d_v}$ be $K$ learned queries for organ $o$. Binary organ masks are downsampled to the ViT token grid and converted to an additive attention bias matrix $B_o$, where background tokens receive $-\infty$.
-
-Organ token extraction uses masked cross-attention:
+Organ token extraction is:
 \begin{equation}
 Z_o = \mathrm{MHA}(Q_o, F(V), F(V); B_o),
 \end{equation}
-where $Z_o \in \mathbb{R}^{K \times d_v}$ and $K$ is the token count per organ.
+where $Z_o \in \mathbb{R}^{K \times d_v}$. In implementation, mask downsampling is aligned to the token-grid geometry $(7,16,11)$.
 
-In the implementation, the downsampled mask size is fixed to $(7,16,11)$ to match the ViT tokenization geometry used in training.
-
-\subsection{Token Granularity: Multi-Token vs Compressed Tokens}
-A major design axis is token granularity per organ:
+\subsection{Token Granularity and Empty-Organ Safety}
+Two token-interface regimes are used:
 \begin{itemize}
-    \item \textbf{Multi-token mode:} $K=8$ visual tokens per organ (96 total for 12 organs).
-    \item \textbf{Compressed mode:} one token per organ after aggregation/projection (effective $K=1$ at decoder interface).
+    \item \textbf{Multi-token interface:} $K=8$ tokens per organ (96 tokens for 12 organs).
+    \item \textbf{Compressed interface:} effective one-token-per-organ representation before decoder conditioning.
 \end{itemize}
 
-The compressed strategy is motivated by 3D token-budget constraints and empirical instability when long visual prefixes are combined with long text prompts.
+Empty masks are explicitly handled. If an organ query sees only blocked positions, attention bias is reset for that path to avoid undefined softmax behavior and NaN propagation.
 
-\subsection{Mask Safety and Empty-Organ Handling}
-A practical issue in organ-conditioned attention is empty masks. If all attention positions are blocked (all $-\infty$), softmax becomes undefined. The implementation detects this case and resets the bias to zeros for that organ-query path, allowing fallback to unconstrained attention rather than producing NaNs.
-
-\section{Architecture Variants Used in Ablations}\label{sec:method_arch_variants}
-\subsection{Baseline: ROI Cross-Attention + Projector}
-The baseline branch uses one masked cross-attention stage over ViT features and a linear projector into decoder embedding space.
-
-\subsection{Positional Visual Prefix Variant}
-The best-performing MedGemma variant adds learned visual positional embeddings and explicit sentinel wrapping (\texttt{<vis>} and \texttt{<end\_vis>}) around visual tokens before text tokens. This helps the decoder separate visual context from instruction text.
-
-\subsection{Perceiver Resampler Variant}
-A Perceiver-style resampler~\cite{jaegle2021perceiver} replaces single-step cross-attention with multiple layers, each containing:
-\begin{enumerate}
-    \item self-attention among organ queries,
-    \item cross-attention from queries to ViT features,
-    \item feed-forward refinement.
-\end{enumerate}
-This increases modeling capacity but also compute and optimization complexity.
-
-\subsection{Multi-Scale ViT-FPN Variant}
-The multi-scale variant fuses intermediate ViT block features (early/mid/late/final) using learned scale weights and a fusion projection. The goal is to preserve both coarse and fine signals, especially for small or low-contrast structures.
-
-\subsection{MedGemma Architecture v3 Variant}
-The v3 branch introduces a CNN stem before ViT, changes the ViT patch geometry accordingly, and adds a text-visual alignment term during training. This variant explores whether stronger inductive bias in the encoder and auxiliary contrastive alignment improves organ grounding.
-
-\section{Vision-Language Bridging}\label{sec:method_bridge}
-\subsection{Projection and Stabilization}
-Visual features are projected from ViT dimension $d_v=768$ to decoder hidden size $d_l$:
+\subsection{Projection, Stabilization, and Sentinel Wrapping}
+Visual features are projected from $d_v=768$ to decoder hidden size $d_l$:
 \begin{equation}
 \tilde{Z}_o = W_p Z_o + b_p, \quad W_p \in \mathbb{R}^{d_v \times d_l}.
 \end{equation}
 
-Two stabilization operations are applied before decoding:
+Before concatenation with text embeddings, two stabilization steps are applied:
 \begin{enumerate}
-    \item layer normalization on projected visual embeddings,
-    \item variance matching to decoder token embedding scale.
+    \item layer normalization on projected visual tokens,
+    \item variance matching to decoder embedding scale.
 \end{enumerate}
 
-The variance matching step reduces ``embedding shock'' when concatenating projected visual vectors with pretrained language embeddings.
-
-\subsection{Sentinel Wrapping and Token Assembly}
-For MedGemma, the effective input sequence is:
+For MedGemma, the sequence format is:
 \begin{equation}
 [\text{BOS}],\;\texttt{<vis>},\;\tilde{Z}_o,\;\texttt{<end\_vis>},\;\text{text prompt and target tokens}.
 \end{equation}
+Loss is masked over injected visual tokens so gradients are concentrated on target text generation.
 
-Loss is masked over the inserted visual block so that only clinically relevant text tokens contribute to language-modeling gradients.
-
-\section{Decoder-Specific Adaptation}\label{sec:method_decoders}
-\subsection{MedGemma Branch}
-MedGemma is loaded as a frozen base decoder, then adapted with LoRA~\cite{hu2022lora}. LoRA settings used in main runs are:
-\begin{itemize}
-    \item rank $r=16$,
-    \item $\alpha=32$,
-    \item dropout $0.05$,
-    \item target modules: \texttt{q\_proj, k\_proj, v\_proj, o\_proj, gate\_proj, up\_proj, down\_proj}.
-\end{itemize}
-
-This keeps training memory manageable while allowing meaningful decoder adaptation under organ-conditioned visual inputs.
-
-\subsection{GPT-2 and BioBART Branches}
-For GPT-2/BioBART, the model is wrapped in a \texttt{VisionEncoderDecoderModel} interface. The encoder output is organ-token embeddings; decoder-side adaptation unfreezes a restricted subset of parameters (cross-attention blocks, normalization layers, output head, and embeddings) while keeping most pretrained weights frozen.
-
-For seq2seq decoders (BioBART), pretrained shared embeddings and output head weights are explicitly copied from the original seq2seq checkpoint to avoid random initialization artifacts in causal-decoding wrappers.
-
-\section{Training Objectives}\label{sec:method_objectives}
-\subsection{Weighted Language Modeling Loss}
-Given batch index $i$, organ $o$, and token position $t$, the primary loss is weighted token-level cross-entropy:
-\begin{equation}
-\mathcal{L}_{\mathrm{LM}} = \frac{1}{B|\mathcal{O}|} \sum_{i=1}^{B}\sum_{o\in\mathcal{O}} w_{i,o}
-\left(\frac{1}{T_{i,o}}\sum_{t=1}^{T_{i,o}} \mathrm{CE}(y_{i,o,t}, \hat{y}_{i,o,t})\right),
-\end{equation}
-where $w_{i,o}$ is an organ-sample weight used for imbalance handling.
-
-The weighting mechanism differs across ablations:
-\begin{itemize}
-    \item probability-based undersampling of default ``no finding'' targets,
-    \item explicit organ loss weights from precomputed statistics,
-    \item curriculum or hard-example dynamic weights.
-\end{itemize}
-
-\subsection{Optional Alignment Loss}
-Some variants (notably \texttt{medgemma\_architecture\_v3} and GPT-2/BioBART branches) add a contrastive alignment objective between organ visual and organ text representations. For patient-level organ sets, similarity logits are computed as:
-\begin{equation}
-S_{o,o'} = \frac{\langle v_o, t_{o'} \rangle}{\tau},
-\end{equation}
-followed by cross-entropy over matching organ indices.
-
-The total objective becomes:
-\begin{equation}
-\mathcal{L} = \mathcal{L}_{\mathrm{LM}} + \lambda \mathcal{L}_{\mathrm{align}},
-\end{equation}
-with $\lambda$ set by variant-specific training code.
-
-\section{Optimization and Training Protocol}\label{sec:method_training}
-\subsection{Shared Optimization Settings}
-Across major runs, training arguments are largely standardized:
-\begin{itemize}
-    \item batch size: 1 per device,
-    \item gradient accumulation: 8,
-    \item learning rate: $1\times10^{-4}$,
-    \item weight decay: 0.01,
-    \item warmup ratio: 0.05,
-    \item epochs: 2 (retraining phase),
-    \item bf16 enabled, fp16 disabled,
-    \item gradient checkpointing enabled,
-    \item checkpoint/evaluation interval: 200 steps.
-\end{itemize}
-
-The low per-device batch size is a practical memory constraint of 3D volumes and large decoders; gradient accumulation is therefore critical for stable optimization.
-
-\subsection{Training-Strategy Ablations}
-Beyond architecture, several training-strategy variants are implemented:
-\begin{itemize}
-    \item \textbf{Curriculum learning:} first phase focuses on pathological organ samples, then switches to full distribution.
-    \item \textbf{Hard example mining:} dynamically upsamples high-loss samples using weighted random sampling.
-    \item \textbf{Undersampling default text:} reduces dominance of ``normal'' templates.
-    \item \textbf{Organ-weighted loss:} separate weights for explicit findings and default findings per organ.
-\end{itemize}
-
-These ablations test whether optimization strategy can compensate for class imbalance in organ-conditioned report targets.
-
-\section{Inference and Report Assembly}\label{sec:method_inference}
-\subsection{Organ-wise Generation}
-At inference, one prompt is created per organ, and generation runs in organ-parallel mode within each patient. Decoding settings are model-family specific:
-\begin{itemize}
-    \item \textbf{MedGemma runs:} beam search (typically 3 beams), \texttt{max\_new\_tokens=100}, \texttt{no\_repeat\_ngram\_size=3}, moderate repetition penalty.
-    \item \textbf{GPT-2/BioBART runs:} beam search (typically 4 beams), \texttt{max\_length=120}, \texttt{no\_repeat\_ngram\_size=3}, stronger repetition penalty.
-\end{itemize}
-
-\subsection{Structured Report Reconstruction}
-Generated organ segments are concatenated in a fixed order:
-\begin{equation}
-\hat{R} = \texttt{LUNG: }\hat{y}_{\mathrm{lung}}\;\Vert\;\cdots\;\Vert\;\texttt{KIDNEY: }\hat{y}_{\mathrm{kidney}}.
-\end{equation}
-
-Organs with empty/insufficient visual support are not forced to contain abnormal statements. This is important to avoid schema-driven hallucination where a model invents findings solely to populate every key.
-
-\section{Model Comparison Matrix}\label{sec:method_model_matrix}
-Table~\ref{tab:model_matrix_method} summarizes the major variants evaluated in this thesis.
+\section{Variants Evaluated}\label{sec:method_variants}
+Table~\ref{tab:model_matrix_method} summarizes the major variants. The baseline (\texttt{medical\_vlm\_8\_tokens\_full}) uses masked organ cross-attention and a direct projector. The strongest MedGemma variant (\texttt{medgemma\_lora\_vis\_token\_pos\_embed}) adds visual positional embeddings and explicit visual sentinels. Perceiver and multiscale variants test heavier visual aggregation/fusion. The v3 branch adds a CNN stem and alignment regularization. Curriculum and hard-example branches isolate optimization-policy effects under the same core interface. Decoder-family branches cover MedGemma, BERT-base, GPT-2, and BioBART with the same visual frontend.
 
 \begin{table}[htbp]
     \centering
@@ -271,17 +139,64 @@ Table~\ref{tab:model_matrix_method} summarizes the major variants evaluated in t
         \texttt{medgemma\_architecture\_v3} & Adds CNN stem and visual-text alignment loss; explores stronger encoder bias and contrastive regularization. \\
         \texttt{curriculum\_learning} & Two-phase pathology-first curriculum before full distribution training. \\
         \texttt{hard\_example\_mining} & Dynamic weighted sampler emphasizing high-loss samples. \\
-        GPT-2 / BioBART branches & Same organ-attention encoder interface with decoder-family adaptation for cross-family comparison. \\
+        BERT-base / GPT-2 / BioBART branches & Same organ-attention encoder interface with decoder-family adaptation for cross-family comparison. \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-\section{Reproducibility and Implementation Notes}\label{sec:method_reproducibility}
+\section{Decoder Adaptation and Training Objective}\label{sec:method_decoder_objective}
+\subsection{Decoder-Specific Adaptation}
+MedGemma is adapted with LoRA~\cite{hu2022lora} while the base model remains frozen. Main settings are rank $r=16$, $\alpha=32$, dropout $0.05$, and target modules
+\texttt{q\_proj, k\_proj, v\_proj, o\_proj, gate\_proj, up\_proj, down\_proj}.
+
+BERT-base, GPT-2, and BioBART branches use the same organ-attention visual frontend within a \texttt{VisionEncoderDecoderModel} interface. The BERT-base branch is trained with language modeling loss as a reproducible reference aligned with the fVLM decoder description. Decoder-side adaptation unfreezes a restricted subset (cross-attention/normalization/output layers and embeddings). For BioBART, shared embeddings and output-head weights are copied from pretrained checkpoints to avoid random-initialization drift in wrapper mode.
+
+\subsection{Weighted Language Modeling Loss}
+With batch index $i$, organ $o$, and token position $t$, the primary objective is:
+\begin{equation}
+\mathcal{L}_{\mathrm{LM}} = \frac{1}{B|\mathcal{O}|} \sum_{i=1}^{B}\sum_{o\in\mathcal{O}} w_{i,o}
+\left(\frac{1}{T_{i,o}}\sum_{t=1}^{T_{i,o}} \mathrm{CE}(y_{i,o,t}, \hat{y}_{i,o,t})\right),
+\end{equation}
+where $w_{i,o}$ is an organ/sample weight for imbalance control.
+
+\subsection{Optional Alignment Objective}
+Some variants add visual-text contrastive alignment:
+\begin{equation}
+S_{o,o'} = \frac{\langle v_o, t_{o'} \rangle}{\tau},
+\end{equation}
+and optimize:
+\begin{equation}
+\mathcal{L} = \mathcal{L}_{\mathrm{LM}} + \lambda \mathcal{L}_{\mathrm{align}}.
+\end{equation}
+This is used mainly in \texttt{medgemma\_architecture\_v3} and selected BERT-base/GPT-2/BioBART branches.
+
+\section{Optimization and Inference}\label{sec:method_optimization_inference}
+\subsection{Shared Optimization Settings}
+Across main retraining runs, settings are largely standardized:
 \begin{itemize}
-    \item Data, training, and evaluation are organized per-variant in dedicated folders to avoid cross-contamination of checkpoints and metrics.
-    \item Each official run stores generated reports and a standardized \texttt{metrics\_final.csv} summary for reproducible chapter tables.
-    \item Metrics are computed through a unified RadEval-based script with fixed key mapping into thesis metric names.
-    \item Decoder comparisons are restricted to official organ-attention result folders to prevent mixing with earlier exploratory runs.
+    \item batch size 1 per device, gradient accumulation 8,
+    \item learning rate $1\times10^{-4}$, weight decay 0.01, warmup ratio 0.05,
+    \item 2 retraining epochs,
+    \item bf16 with gradient checkpointing,
+    \item checkpoint/evaluation every 200 steps.
 \end{itemize}
 
-This methodological design keeps the contribution focused: controlling 3D token budget and organ grounding while comparing architecture and decoder choices under one consistent data protocol.
+\subsection{Training-Strategy Variants}
+Beyond architecture, the thesis evaluates curriculum learning, hard-example mining, undersampling of dominant ``no-finding'' targets, and organ-weighted losses.
+
+\subsection{Organ-Wise Inference and Report Assembly}
+At inference, one prompt is generated per organ and decoded with beam search. MedGemma runs typically use 3 beams and \texttt{max\_new\_tokens=100}; BERT-base/GPT-2/BioBART runs typically use 4 beams and \texttt{max\_length=120}. Outputs are assembled in fixed organ order:
+\begin{equation}
+\hat{R} = \texttt{LUNG: }\hat{y}_{\mathrm{lung}}\;\Vert\;\cdots\;\Vert\;\texttt{KIDNEY: }\hat{y}_{\mathrm{kidney}}.
+\end{equation}
+Organs with weak or absent visual support are not forced to produce abnormal statements, reducing schema-induced hallucination.
+
+\section{Reproducibility Notes}\label{sec:method_reproducibility}
+\begin{itemize}
+    \item Training/evaluation artifacts are isolated per variant to prevent checkpoint and metric contamination.
+    \item Official runs include generated report files and standardized \texttt{metrics\_final.csv} summaries.
+    \item Metric computation is centralized through one RadEval-based script with fixed key mapping.
+    \item Decoder comparison uses only official organ-attention result folders.
+\end{itemize}
+
+This design keeps the thesis contribution focused: controlling organ grounding and token interface under a consistent data protocol, then comparing architecture and decoder choices on that shared foundation.

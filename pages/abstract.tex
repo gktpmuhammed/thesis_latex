@@ -1,26 +1,9 @@
 \chapter{\abstractname}
 
-This thesis investigates organ-aware radiology report generation from 3D chest CT using
-vision-language foundation models. The main challenge is to preserve clinically relevant
-anatomical information while keeping the visual token interface compact and stable for
-language decoding.
+This thesis investigates organ-aware radiology report generation from 3D chest CT using vision-language foundation models. The main challenge is to preserve clinically relevant anatomical information while keeping the visual token interface compact and stable for language decoding.
 
-We propose an end-to-end pipeline that combines: (i) volumetric CT preprocessing and
-organ-mask supervision, (ii) LLM-based decomposition of reports into organ-level targets,
-(iii) organ-conditioned visual token extraction from a 3D vision encoder, and
-(iv) decoder adaptation with parameter-efficient fine-tuning. The framework supports a
-unified comparison across MedGemma, GPT-2, and BioBART, with MedGemma-centered
-ablations completed in this thesis version.
+We propose an end-to-end pipeline that combines: (i) volumetric CT preprocessing and organ-mask supervision, (ii) LLM-based decomposition of reports into organ-level targets, (iii) organ-conditioned visual token extraction from a 3D vision encoder, and (iv) decoder adaptation with parameter-efficient fine-tuning. The framework supports a unified comparison across MedGemma, BERT, GPT-2, and BioBART, with MedGemma-centered ablations completed in this thesis version.
 
-Experiments on CT-RATE show that the strongest gains come from interface design rather than
-architectural complexity. The best MedGemma variant
-(\texttt{medgemma\_lora\_vis\_token\_pos\_embed}) achieves the top global scores in key metrics,
-including GREEN (0.348), BLEU-4 (0.105), ROUGE-L (0.379), BERTScore (0.596),
-RadGraph (0.268), and RadCliQ (1.104), improving over the baseline in most clinically
-relevant dimensions. Perceiver and multiscale variants did not consistently outperform the
-simpler baseline under the same training budget, indicating that stable vision-language
-bridging is a higher-leverage design factor in this setting.
+Experiments on CT-RATE show that the strongest gains come from interface design rather than architectural complexity. The best MedGemma variant achieves the top global scores in key metrics, including GREEN (0.348), BLEU-4 (0.105), ROUGE-L (0.379), BERTScore (0.596), RadGraph (0.268), and RadCliQ (1.104), improving over the baseline in most clinically relevant dimensions. Perceiver and multiscale variants did not consistently outperform the simpler baseline under the same training budget, indicating that stable vision-language bridging is a higher-leverage design factor in this setting.
 
-Overall, the thesis provides a reproducible organ-aware 3D report generation framework,
-code-grounded ablation evidence, and a practical direction for completing cross-decoder
-comparison with GPT-2 and BioBART under a shared evaluation protocol.
+Overall, the thesis provides a reproducible organ-aware 3D report generation framework, code-grounded ablation evidence, and a practical direction for completing cross-decoder comparison with BERT, GPT-2 and BioBART under a shared evaluation protocol.
