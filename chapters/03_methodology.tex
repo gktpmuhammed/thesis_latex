@@ -39,7 +39,10 @@ Replacing center-cropping with full-volume resizing reduces accidental exclusion
 \subsection{Target Organ Set and Segmentation Mapping}
 The final schema uses 12 organs:
 \begin{equation}
-\mathcal{O} = \{\text{lung, heart, esophagus, liver, gallbladder, stomach, pancreas, spleen, kidney, aorta, trachea, rib}\}.
+\begin{aligned}
+\mathcal{O} = \{&\text{lung, heart, esophagus, liver, gallbladder, stomach,} \\
+               &\text{pancreas, spleen, kidney, aorta, trachea, rib}\}.
+\end{aligned}
 \end{equation}
 
 Mask extraction follows fixed segmentation-ID mappings summarized in Table~\ref{tab:organ_id_mapping}.
@@ -68,7 +71,7 @@ Mask extraction follows fixed segmentation-ID mappings summarized in Table~\ref{
 \end{table}
 
 \subsection{Report Decomposition Targets}
-Reference reports are decomposed into organ-keyed JSON records using an instruction-following LLM pipeline (Llama-3.3-70B-Instruct via vLLM~\cite{kwon2023efficient}, with AWQ quantization~\cite{lin2023awq}). The decomposition enforces:
+Reference reports are decomposed into organ-keyed JSON records using an instruction-following LLM pipeline based on Llama-3.3-70B-Instruct. Inference is served through vLLM~\cite{kwon2023efficient} with AWQ quantization~\cite{lin2023awq}. The decomposition enforces:
 \begin{enumerate}
     \item schema-constrained JSON output,
     \item one text field per organ key,
@@ -77,14 +80,33 @@ Reference reports are decomposed into organ-keyed JSON records using an instruct
 
 This converts free-text supervision into organ-conditioned targets and enables organ-level error analysis.
 
-During training, each organ is paired with an organ-specific prompt. MedGemma branches use chat-format prompts; BERT-base/GPT-2/BioBART branches use shorter textual prompts (e.g., \texttt{Describe [organ]:}). In all branches, loss is masked to the response region only.
+During training, each organ is paired with an organ-specific prompt. MedGemma branches use chat-format prompts, while BERT-base/GPT-2/BioBART branches use shorter textual prompts such as \texttt{Describe [organ]:}. In all branches, loss is masked to the response region only.
 
-\subsection{Chest-CT Visibility Caveat}
-Although the dataset modality is chest CT, several upper-abdominal organs appear in a non-trivial subset of scans. Visibility remains inconsistent across patients and protocols, so sparse organs are treated as optional supervision targets rather than mandatory output constraints.
+\subsection{Organ Visibility and Report Presence Distribution}
+Although CT-RATE is a chest CT dataset, upper-abdominal organs appear in a non-trivial subset of studies. To make this explicit, we report organ visibility across the dataset and organ-level report presence after decomposition.
 
+The first distribution is computed from segmentation masks and measures how often each organ is visually present. The second distribution is computed from decomposed report targets and measures how often each organ receives a report entry. Comparing the two distributions helps separate visual sparsity from text-label sparsity and directly motivates the empty-organ handling and imbalance-control strategies used later in training.
+
+\begin{figure}[htbp]
+    \centering
+    \fbox{\parbox[c][45mm][c]{0.9\linewidth}{\centering
+    Placeholder figure\\
+    Organ visibility distribution across CT-RATE}}
+    \caption{Organ visibility distribution across CT-RATE, measured as the fraction of studies with a non-empty organ mask.}
+    \label{fig:organ_visibility_distribution}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \fbox{\parbox[c][45mm][c]{0.9\linewidth}{\centering
+    Placeholder figure\\
+    Organ-level report presence distribution across CT-RATE}}
+    \caption{Organ-level report presence distribution across CT-RATE, measured from decomposed report targets.}
+    \label{fig:organ_report_presence_distribution}
+\end{figure}
 \section{Model Architecture}\label{sec:method_architecture}
 \subsection{3D Visual Backbone}
-All principal variants use a 3D ViT encoder initialized from pretrained weights and fine-tuned end-to-end. The standard configuration uses input size $(112,256,352)$, patch size $(16,16,32)$, and hidden size 768.
+All principal variants use a 3D ViT encoder initialized from pretrained weights and fine-tuned end-to-end. The encoder architecture and default backbone settings are directly adapted from the fVLM implementation~\cite{shui2025fvlm} to keep the visual frontend aligned with prior work. The standard configuration uses input size $(112,256,352)$, patch size $(16,16,32)$, and hidden size 768.
 
 \subsection{Organ Queries and Masked Cross-Attention}
 Let $F(V) \in \mathbb{R}^{T \times d_v}$ be ViT token features and $Q_o \in \mathbb{R}^{K \times d_v}$ be learned queries for organ $o$. Organ masks are downsampled to the ViT token grid and converted into additive attention bias $B_o$ that blocks background tokens.
@@ -123,7 +145,7 @@ For MedGemma, the sequence format is:
 Loss is masked over injected visual tokens so gradients are concentrated on target text generation.
 
 \section{Variants Evaluated}\label{sec:method_variants}
-Table~\ref{tab:model_matrix_method} summarizes the major variants. The baseline (\texttt{medical\_vlm\_8\_tokens\_full}) uses masked organ cross-attention and a direct projector. The strongest MedGemma variant (\texttt{medgemma\_lora\_vis\_token\_pos\_embed}) adds visual positional embeddings and explicit visual sentinels. Perceiver and multiscale variants test heavier visual aggregation/fusion. The v3 branch adds a CNN stem and alignment regularization. Curriculum and hard-example branches isolate optimization-policy effects under the same core interface. Decoder-family branches cover MedGemma, BERT-base, GPT-2, and BioBART with the same visual frontend.
+Table~\ref{tab:model_matrix_method} summarizes the major variants with concise display names. The raw run IDs are listed in Appendix~\ref{appendix:model_variant_mapping}. The baseline uses masked organ cross-attention and a direct projector. The strongest MedGemma variant adds visual positional embeddings and explicit visual sentinels. Perceiver and multiscale variants test heavier visual aggregation/fusion. The v3 branch adds a CNN stem and alignment regularization. Curriculum and hard-example branches isolate optimization-policy effects under the same core interface. Decoder-family branches cover MedGemma, BERT-base, GPT-2, and BioBART with the same visual frontend.
 
 \begin{table}[htbp]
     \centering
@@ -132,17 +154,33 @@ Table~\ref{tab:model_matrix_method} summarizes the major variants. The baseline 
     \begin{tabular}{p{3.2cm}p{10.8cm}}
         \toprule
         \textbf{Variant} & \textbf{Main Design Choice} \\\midrule
-        \texttt{medical\_vlm\_8\_tokens\_full} & Baseline MedGemma branch with 8 organ tokens, masked cross-attention, projector, and weighted LM training. \\
-        \texttt{medgemma\_lora\_vis\_token\_pos\_embed} & Adds visual positional embeddings and explicit visual sentinel wrapping; strongest global performance in current runs. \\
-        \texttt{perceiver\_resampler} & Replaces single cross-attention with stacked Perceiver-style self/cross-attention blocks. \\
-        \texttt{multiscale\_vit\_fpn} & Fuses intermediate ViT features from multiple depths before organ-query attention. \\
-        \texttt{medgemma\_architecture\_v3} & Adds CNN stem and visual-text alignment loss; explores stronger encoder bias and contrastive regularization. \\
-        \texttt{curriculum\_learning} & Two-phase pathology-first curriculum before full distribution training. \\
-        \texttt{hard\_example\_mining} & Dynamic weighted sampler emphasizing high-loss samples. \\
+        Baseline-8T & Baseline MedGemma branch with 8 organ tokens, masked cross-attention, projector, and weighted LM training. \\
+        Prefix-Stable-8T & Adds visual positional embeddings and explicit visual sentinel wrapping; strongest global performance in current runs. \\
+        MaxPool-8T & Keeps the baseline design but changes mask downsampling to max pooling before token-grid attention. \\
+        Perceiver-Bridge & Replaces single cross-attention with stacked Perceiver-style self/cross-attention blocks. \\
+        Multiscale-FPN & Fuses intermediate ViT features from multiple depths before organ-query attention. \\
+        CNN-Align-v3 & Adds CNN stem and visual-text alignment loss; explores stronger encoder bias and contrastive regularization. \\
+        Align-v1 & Adds alignment regularization without the full v3 architectural stack. \\
+        Curriculum-2Phase & Two-phase pathology-first curriculum before full-distribution training. \\
+        Hard-Mining & Dynamic weighted sampler emphasizing high-loss samples. \\
+        Undersample-DefaultText & Reduces training exposure to default empty-organ text via organ-specific keep probabilities. \\
+        Weighted-Organ-Loss & Reweights loss contributions for explicit versus default organ statements. \\
         BERT-base / GPT-2 / BioBART branches & Same organ-attention encoder interface with decoder-family adaptation for cross-family comparison. \\
         \bottomrule
     \end{tabular}
 \end{table}
+
+\subsection{Controlled Comparison Groups}
+To keep interpretation focused, we organize results by groups where one factor is changed at a time.
+\begin{itemize}
+    \item Interface group (area mask downsampling): Baseline-8T and Prefix-Stable-8T isolate visual-prefix design under the same area-based mask-to-token mapping.
+    \item Mask-downsampling transition: Baseline-8T and MaxPool-8T isolate the effect of switching mask downsampling from area interpolation to max pooling.
+    \item Architecture group (maxpool lineage): MaxPool-8T, Perceiver-Bridge, Multiscale-FPN, Align-v1, and CNN-Align-v3 isolate visual-backbone and bridge choices under a shared maxpool-based interface.
+    \item Training-policy group (area lineage): Prefix-Stable-8T, Undersample-DefaultText, and Weighted-Organ-Loss isolate optimization and imbalance-control choices in the area-based branch.
+    \item Training-policy group (maxpool lineage): MaxPool-8T, Hard-Mining, and Curriculum-2Phase isolate optimization-policy effects in the maxpool-based branch.
+    \item No-findings text-policy group: v3-Resized-DefaultText and v3-Resized-SynonymText share the same v3-resized backbone and differ only in default empty-organ phrasing.
+    \item Decoder-family group: MedGemma, BERT-base, GPT-2, and BioBART use the same organ-attention visual frontend for cross-decoder comparison.
+\end{itemize}
 
 \section{Decoder Adaptation and Training Objective}\label{sec:method_decoder_objective}
 \subsection{Decoder-Specific Adaptation}
@@ -168,21 +206,21 @@ and optimize:
 \begin{equation}
 \mathcal{L} = \mathcal{L}_{\mathrm{LM}} + \lambda \mathcal{L}_{\mathrm{align}}.
 \end{equation}
-This is used mainly in \texttt{medgemma\_architecture\_v3} and selected BERT-base/GPT-2/BioBART branches.
+This is used mainly in CNN-Align-v3 and Align-v1, and in selected BERT-base/GPT-2/BioBART branches.
 
 \section{Optimization and Inference}\label{sec:method_optimization_inference}
 \subsection{Shared Optimization Settings}
-Across main retraining runs, settings are largely standardized:
+Across main training runs, settings are largely standardized:
 \begin{itemize}
     \item batch size 1 per device, gradient accumulation 8,
     \item learning rate $1\times10^{-4}$, weight decay 0.01, warmup ratio 0.05,
-    \item 2 retraining epochs,
+    \item 1 training epochs,
     \item bf16 with gradient checkpointing,
     \item checkpoint/evaluation every 200 steps.
 \end{itemize}
 
 \subsection{Training-Strategy Variants}
-Beyond architecture, the thesis evaluates curriculum learning, hard-example mining, undersampling of dominant ``no-finding'' targets, and organ-weighted losses.
+Beyond architecture, the thesis evaluates curriculum learning, hard-example mining, undersampling of dominant default-text targets, and organ-weighted losses.
 
 \subsection{Organ-Wise Inference and Report Assembly}
 At inference, one prompt is generated per organ and decoded with beam search. MedGemma runs typically use 3 beams and \texttt{max\_new\_tokens=100}; BERT-base/GPT-2/BioBART runs typically use 4 beams and \texttt{max\_length=120}. Outputs are assembled in fixed organ order:
@@ -195,7 +233,7 @@ Organs with weak or absent visual support are not forced to produce abnormal sta
 \begin{itemize}
     \item Training/evaluation artifacts are isolated per variant to prevent checkpoint and metric contamination.
     \item Official runs include generated report files and standardized \texttt{metrics\_final.csv} summaries.
-    \item Metric computation is centralized through one RadEval-based script with fixed key mapping.
+    \item Metric computation is centralized through one RadEval-based script with fixed key mapping~\cite{xu-etal-2025-radeval}.
     \item Decoder comparison uses only official organ-attention result folders.
 \end{itemize}
 

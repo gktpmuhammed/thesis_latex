@@ -1,0 +1,50 @@
+% !TeX root = ../main.tex
+\chapter{Model Variant Name Mapping}\label{appendix:model_variant_mapping}
+
+This appendix maps the short model names used in Chapters~\ref{chapter:methodology}, \ref{chapter:experiments}, and \ref{chapter:discussion} to the raw run IDs in the experiment folders.
+
+\section{Main Retraining Set}
+\begin{table}[htbp]
+    \centering
+    \small
+    \caption{Display-name mapping for the main retraining result set (\texttt{results\_retrain}).}
+    \label{tab:appendix_variant_mapping_main}
+    \begin{tabular}{p{3.2cm}p{4.7cm}p{2.6cm}p{3.8cm}}
+        \toprule
+        \textbf{Display Name} & \textbf{Raw Run ID} & \textbf{Axis} & \textbf{Main Difference} \\\midrule
+        Baseline-8T & \path{medical_vlm_8_tokens_full} & Token/bridge & 8 tokens per organ baseline \\
+        Prefix-Stable-8T & \path{medgemma_lora_vis_token_pos_embed} & Token/bridge & Visual positional embeddings and sentinel-wrapped visual prefix \\
+        MaxPool-8T & \path{medical_vlm_8_tokens_full_maxpool} & Token/bridge & Max-pooling mask downsampling before token-grid attention \\
+        Perceiver-Bridge & \path{perceiver_resampler} & Architecture & Perceiver-style stacked self/cross attention for visual aggregation \\
+        Multiscale-FPN & \path{multiscale_vit_fpn} & Architecture & Multiscale fusion of intermediate ViT features \\
+        CNN-Align-v3 & \path{medgemma_architecture_v3} & Architecture & CNN stem and alignment regularization \\
+        Align-v1 & \path{medgemma_alignment_v1} & Architecture & Alignment objective variant without full v3 stack \\
+        Hard-Mining & \path{hard_example_mining} & Training policy & Weighted sampler emphasizing difficult samples \\
+        Curriculum-2Phase & \path{curriculum_learning} & Training policy & Pathology-first phase followed by full-data phase \\
+        Undersample-DefaultText & \path{lora_with_vis_tokens_pos_embed_undersampling} & Training policy & Reduced keep probability for default empty-organ text \\
+        Weighted-Organ-Loss & \path{lora_with_vis_tokens_pos_embed_weight_loss} & Training policy & Organ-wise and label-type loss weighting \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Text-Policy Set (Legacy)}
+\begin{table}[htbp]
+    \centering
+    \small
+    \caption{Display-name mapping for the legacy text-policy runs (\texttt{results}).}
+    \label{tab:appendix_variant_mapping_text}
+    \begin{tabular}{p{3.8cm}p{5.0cm}p{4.9cm}}
+        \toprule
+        \textbf{Display Name} & \textbf{Raw Run ID} & \textbf{Comparability Note} \\\midrule
+        v3-Resized-DefaultText & \path{medgemma_architecture_v3_resized} & Baseline for strict default-vs-synonym comparison \\
+        v3-Resized-SynonymText & \path{medgemma_architecture_v3_resized_synonyms} & Strict pair with v3-Resized-DefaultText \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Legacy Aliases and Implementation-Only Variant}
+\begin{itemize}
+    \item \path{medgemma_vlm_8_tokens_full} is an older naming alias of the Baseline-8T branch in legacy result exports.
+    \item \path{lora_with_vis_tokens_pos_embed} is an older naming alias of the Prefix-Stable-8T branch in legacy result exports.
+    \item \path{medgemma_lora_vis_token} corresponds to a single-token interface prototype (Baseline-1T) kept for implementation comparison; it is not included in the standardized retraining metric tables.
+\end{itemize}
