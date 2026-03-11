@@ -103,11 +103,11 @@ Early report-generation studies relied heavily on lexical overlap metrics such a
 
 \subsection{2D Radiology Foundation Models}
 
-As the field moved toward foundation models, researchers began adapting large frozen language models as report decoders. R2GenGPT~\cite{wang2023r2gengpt} showed that combining a frozen LLM with a trainable visual encoder and a lightweight projection layer can produce high-quality radiology reports with competitive results on natural language generation and clinical efficacy metrics. This setup benefits from the language knowledge in pretrained LLMs while keeping multimodal training costs manageable.
+As the field moved toward foundation models, researchers began adapting large frozen language models as report decoders. R2GenGPT~\cite{wang2023r2gengpt} showed that combining a frozen LLM with a trainable visual encoder and a lightweight projection layer can generate radiology reports and achieve competitive results on common natural language generation and clinical efficacy metrics. This setup benefits from the language knowledge in pretrained LLMs while keeping multimodal training costs manageable.
 
-Recently, foundation models tailored for 2D X-ray interpretation have emerged. CheXagent~\cite{chen2024chexagent} is a clinical foundation model for chest X-rays. By fine-tuning a large VLM on radiology reports and visual question-answering pairs, CheXagent reported state-of-the-art performance in both free-text report generation and interactive clinical dialogue. 
+Recently, foundation models tailored for 2D X-ray interpretation have emerged. CheXagent~\cite{chen2024chexagent} is a clinical foundation model for chest X-rays. By fine-tuning a large VLM on radiology reports and visual question-answering pairs, CheXagent reported strong performance on both report generation and interactive clinical question-answering tasks. 
 
-At the same time, the architectural focus shifted from linguistic fluency toward clinical grounding. MAIRA-2~\cite{bannur2024maira} introduced grounded radiology report generation by mapping generated clinical assertions back to localized bounding boxes in the original X-ray. This spatial grounding reduced hallucinations and addressed an important safety requirement for medical deployment. 
+At the same time, the architectural focus shifted from linguistic fluency toward clinical grounding. MAIRA-2~\cite{bannur2024maira} introduced grounded radiology report generation with localized grounding of reported findings in the original X-ray. This grounding reduced unsupported findings and addressed an important safety requirement for medical deployment. 
 
 \subsection{3D Volumetric Report Generation}
 
@@ -124,7 +124,7 @@ The release of CT-RATE spurred the rapid development of several pioneering 3D mu
 
 Recent work also emphasized fine-grained anatomical supervision for CT understanding. fVLM~\cite{shui2025fvlm} introduced large-scale and fine-grained vision-language pretraining for CT and reported strong gains on report-generation benchmarks. Its organ-aware supervision and decomposition perspective directly motivates the organ-guided decomposition strategy used in this thesis.
 
-A key challenge across these works is token compression. A raw 3D CT volume contains far more information than a 2D image, and naive patch extraction can produce tens of thousands of tokens that overwhelm the LLM decoder. Recent studies~\cite{hamamci2025bettertokensbetter3d} emphasize that tokenization strategies such as Perceiver-based latent resampling, spatial 3D pooling, and learned region-of-interest selection strongly affect 3D VLM performance.
+A key challenge across these works is token compression. A raw 3D CT volume contains far more information than a 2D image, and naive patch extraction can produce tens of thousands of tokens that overwhelm the LLM decoder. Recent evidence~\cite{hamamci2025bettertokensbetter3d} shows that tokenization design is a primary performance driver in 3D VLMs: the paper highlights limitations of slice-wise tokenization and reports gains from compact volumetric tokens trained with a curriculum that includes local reconstruction, overlapping-window tiling, and long-context refinement.
 
 \begin{table}[htbp]
     \centering
