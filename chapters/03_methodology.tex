@@ -22,6 +22,15 @@ The end-to-end workflow contains six stages:
     \item Report assembly and metric computation.
 \end{enumerate}
 
+Figure~\ref{fig:organ_decomposition_pipeline} illustrates this pipeline from free-text report decomposition to organ-conditioned generation.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/organ_decomposition.png}
+    \caption{Organ decomposition and generation pipeline. A free-text radiology report is decomposed into organ-keyed targets, aligned with CT volume and organ masks, and used to train organ-conditioned report generation. Adapted from fVLM~\cite{shui2025fvlm} with modifications for organ-level supervision and analysis.}
+    \label{fig:organ_decomposition_pipeline}
+\end{figure}
+
 The same interface is used across four decoder families: MedGemma~\cite{yang2024medgemma}, BERT-base~\cite{devlin2019bert}, GPT-2~\cite{radford2019language}, and BioBART~\cite{yuan2022biobart}.
 
 \section{Data and Targets}\label{sec:method_data_targets}
@@ -105,6 +114,13 @@ The first distribution is computed from segmentation masks and measures how ofte
     \label{fig:organ_report_presence_distribution}
 \end{figure}
 \section{Model Architecture}\label{sec:method_architecture}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/architecture.png}
+    \caption{Overview of the proposed organ-aware medical VLM. (a) ROI-aware visual token extraction: organ masks are pooled to the ViT patch grid and used as attention bias in masked cross-attention with learnable organ queries, producing organ-specific visual tokens that are projected to the LLM embedding space and enriched with positional embeddings and layer normalization. (b) Organ-wise report generation: the visual tokens are inserted into a multimodal prefix together with an instruction prompt and decoded by MedGemma-4B-it with LoRA adapters to generate organ-level findings, which are aggregated into the final report. Adapted from fVLM~\cite{shui2025fvlm} with modifications for organ-level supervision and analysis.}
+    \label{fig:model_architecture_overview}
+\end{figure}
+
 \subsection{3D Visual Backbone}
 All principal variants use a 3D ViT encoder initialized from pretrained weights and fine-tuned end-to-end. The encoder architecture and default backbone settings are directly adapted from the fVLM implementation~\cite{shui2025fvlm} to keep the visual frontend aligned with prior work. The standard configuration uses input size $(112,256,352)$, patch size $(16,16,32)$, and hidden size 768.
 

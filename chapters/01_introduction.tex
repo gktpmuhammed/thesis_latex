@@ -25,7 +25,7 @@ The main contributions of this thesis are as follows:
 \begin{enumerate}
     \item \textbf{fVLM-Based Report Generation Framework}: We build an end-to-end CT report generation pipeline around a pretrained fVLM vision encoder, with a shared organ-aware visual frontend, decoder-side adaptation, and a reproducible BERT-base reference branch.
     \item \textbf{Systematic Quality-Improvement Study}: We evaluate practical strategies to improve report generation quality, including organ-conditioned token interfaces, decoder choices such as MedGemma, BERT-base, GPT-2, and BioBART, and training ablations under a controlled setup.
-    \item \textbf{Clinical Efficacy Prioritization}: We validate generated results strictly against clinical-factuality metrics such as GREEN, RadGraph to isolate true clinical reasoning from rote n-gram memorization.
+    \item \textbf{Clinical Efficacy Prioritization}: We validate generated results strictly against clinical-factuality metrics such as GREEN, RadGraph to distinguish genuine clinical correctness from superficial overlap-based gains driven by memorized reporting patterns.
 \end{enumerate}
 
 \section{Thesis Outline}

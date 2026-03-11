@@ -3,16 +3,16 @@
 \section{Conclusion}
 This thesis studied organ-aware radiology report generation from 3D chest CT with a unified vision-language pipeline. The core objective was to reduce the gap between rich volumetric information and decoder-side token constraints while preserving clinically meaningful report content.
 
-The implemented framework combined organ-level supervision via report decomposition, organ-conditioned visual token extraction, and decoder adaptation under a consistent evaluation protocol. The evidence now includes systematic MedGemma ablations and completed GPT-2 and BioBART decoder rows under the same evaluation pass.
+The implemented framework combined organ-level supervision via report decomposition, organ-conditioned visual token extraction, and decoder adaptation under a consistent evaluation protocol. The evidence now includes systematic MedGemma ablations and completed decoder-family rows for MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART under the same evaluation pass.
 
-The main empirical conclusion is concise: in this setting, stable visual-language interfacing is more decisive than increasing architectural complexity. The strongest model variant used explicit visual-prefix structuring and delivered the most consistent improvements on the primary global metrics used in this thesis.
+The main empirical conclusion is concise: in this setting, stable visual-language interfacing is more decisive than increasing architectural complexity. Within MedGemma ablations, the strongest model variant used explicit visual-prefix structuring and delivered the most consistent improvements on the primary global metrics used in this thesis. Cross-decoder analysis also shows that stronger aggregate lexical-semantic metrics can coexist with higher template reuse, so deployment-oriented interpretation must include diversity and structure diagnostics in addition to metric averages.
 
 Overall, the thesis contributes:
 \begin{itemize}
     \item a reproducible end-to-end organ-aware 3D report generation setup,
     \item code-grounded ablation evidence on interface, architecture, and training strategy,
     \item a standardized evaluation workflow supporting multi-metric interpretation,
-    \item a protocol-matched cross-decoder comparison with completed MedGemma, GPT-2, and BioBART rows, plus a reserved fVLM-aligned BERT-base baseline row.
+    \item a protocol-matched cross-decoder comparison with completed MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART rows.
 \end{itemize}
 
 The work therefore advances both method (how to structure the task) and practice (how to implement and evaluate it reliably).
@@ -31,9 +31,9 @@ These messages are intended to be directly reusable by future work in volumetric
 \section{Future Work}
 Future work is prioritized in three tracks.
 
-\subsection{Track 1: Complete the Current Thesis Axis}
+\subsection{Track 1: Strengthen the Current Thesis Axis}
 \begin{enumerate}
-    \item Finalize the fVLM-aligned BERT-base run and populate the remaining decoder row under the same standardized metric pass.
+    \item Add multi-seed stability checks for the decoder-family table under the same standardized metric pass.
     \item Insert finalized cross-attention case-study figures to complete the quantitative + qualitative evidence pair.
     \item Add compact significance reporting (e.g., bootstrap confidence intervals) for key global metrics.
 \end{enumerate}
@@ -59,4 +59,4 @@ This track targets the main technical bottlenecks identified by the ablations: t
 This track is required for translational credibility. It shifts the system from benchmark-oriented progress to clinically meaningful utility and safety assessment.
 
 \section{Final Remark}
-The thesis shows that organ-aware 3D report generation is tractable when anatomical structure is treated as a first-class modeling constraint. With the current framework and results, the project is technically mature enough to finalize the remaining BERT baseline comparison and move toward stronger clinical validation.
+The thesis shows that organ-aware 3D report generation is tractable when anatomical structure is treated as a first-class modeling constraint. With the current framework and completed decoder comparisons, the project is technically mature enough to move toward stronger clinical validation.
