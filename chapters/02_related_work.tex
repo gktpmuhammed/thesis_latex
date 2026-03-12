@@ -99,7 +99,7 @@ Transformer-based methods later improved report quality by tracking long-range c
 
 \subsection{The Evaluation Paradigm: From N-Grams to Clinical Efficacy}
 
-Early report-generation studies relied heavily on lexical overlap metrics such as BLEU, ROUGE, and METEOR. In medical reporting, lexical overlap alone is insufficient because clinically meaningful errors can occur with small wording changes. The field therefore shifted toward clinically grounded metrics such as CheXbert~\cite{smit2020chexbert}, RadGraph~\cite{jain2021radgraph}, and GREEN~\cite{ostmeier2024green}, which better reflect factual and relational correctness. In this thesis, the high-level motivation is introduced here, while the operational metric interpretation policy is defined in Section~\ref{sec:evaluation_metrics}.
+Early report-generation studies relied heavily on lexical overlap metrics such as BLEU, ROUGE, and METEOR. In medical reporting, lexical overlap alone is insufficient because clinically meaningful errors can occur with small wording changes. The field therefore shifted toward clinically grounded metrics such as CheXbert~\cite{smit2020chexbert}, RadGraph~\cite{jain2021radgraph}, and GREEN~\cite{ostmeier2024green}, which better reflect factual and relational correctness. In this thesis, the high-level motivation is introduced here, while the operational metric interpretation policy is defined in Section~\ref{sec:metric_interpretation_policy}.
 
 \subsection{2D Radiology Foundation Models}
 
@@ -128,25 +128,24 @@ A key challenge across these works is token compression. A raw 3D CT volume cont
 
 \begin{table}[htbp]
     \centering
-    \caption{Performance benchmarking of recent 3D volumetric foundation models for radiology report generation on CT-RATE. The reported metrics reflect the shift toward clinical efficacy metrics such as GREEN in addition to traditional language metrics such as BLEU-4. Data adapted from recent multimodal surveys.}
+    \caption{Performance benchmarking of recent 3D volumetric foundation models for radiology report generation on CT-RATE within the CT-3DRRG benchmark. All numeric values are taken directly from Table~2 of Argus~\cite{argus2024}. CT2Rep, RadFM, and M3D rows are Argus re-evaluations of the original methods~\cite{hamamci2024ct2rep,radfm2024,bai2024m3d} in the normal-resolution setting $(256 \times 256 \times 64)$, while Argus rows are reported in the high-resolution setting $(512 \times 512 \times 256)$.}
     \label{tab:3d_model_comparison}
     \resizebox{\textwidth}{!}{%
     \begin{tabular}{llccccc}
         \toprule
-        \textbf{Model Name} & \textbf{Parameters} & \textbf{Input Resolution} & \textbf{BLEU-4} & \textbf{ROUGE-L} & \textbf{METEOR} & \textbf{GREEN} \\ \midrule
-        Argus-70B & 70B & $512 \times 512 \times 256$ & 47.98 & - & - & \textbf{60.22} \\
-        Argus-8B & 8B & $512 \times 512 \times 256$ & 45.81 & - & - & 58.42 \\
-        Argus-3B & 3B & $512 \times 512 \times 256$ & 43.03 & - & - & 55.56 \\
-        CT2Rep-3B & 3B & $256 \times 256 \times 64$ & 38.77 & 48.96 & - & 51.72 \\
-        M3D-3B & 3B & $256 \times 256 \times 64$ & 40.23 & 50.31 & - & 50.31 \\
-        RadFM-3B & 3B & $256 \times 256 \times 64$ & 39.95 & 49.46 & - & 49.46 \\
-        COLIPRI-CRM & 1B & $160 \times 160 \times 160$ & 45.20 & 55.20 & 57.80 & - \\
+        \textbf{Model Name} & \textbf{Parameters} & \textbf{Input Resolution} & \textbf{Avg. NLP} & \textbf{GREEN} & \textbf{RaTEScore} & \textbf{RadGraphXL} \\ \midrule
+        CT2Rep-3B & 3B & $256 \times 256 \times 64$ & 38.77 & 48.96 & 58.10 & 25.14 \\
+        M3D-3B & 3B & $256 \times 256 \times 64$ & 40.23 & 50.31 & 60.16 & 26.08 \\
+        RadFM-3B & 3B & $256 \times 256 \times 64$ & 39.95 & 49.46 & 59.02 & 25.73 \\
+        Argus-3B & 3B & $512 \times 512 \times 256$ & 43.03 & 55.56 & 66.53 & 29.52 \\
+        Argus-8B & 8B & $512 \times 512 \times 256$ & 45.81 & 58.42 & 70.68 & 32.04 \\
+        Argus-70B & 70B & $512 \times 512 \times 256$ & \textbf{47.98} & \textbf{60.22} & \textbf{72.53} & \textbf{33.07} \\
         \bottomrule
     \end{tabular}
     }
 \end{table}
 
-As shown in Table~\ref{tab:3d_model_comparison}, under the reported experimental settings, higher input resolution and larger language decoders such as Argus-70B are associated with higher GREEN scores.
+As shown in Table~\ref{tab:3d_model_comparison}, within the reported benchmark settings, higher input resolution and larger language decoders in Argus are associated with stronger clinical-efficacy scores.
 
 
 %% ========================================================

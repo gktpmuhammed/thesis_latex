@@ -11,7 +11,7 @@ This chapter evaluates organ-aware 3D CT report generation under a consistent CT
 \end{itemize}
 
 \subsection{Dataset and Preprocessing}
-All experiments use \textbf{CT-RATE}~\cite{hamamci2024foundation}, with official split conventions~\cite{hamamci2024generatect}. Table~\ref{tab:ctrate_stats} summarizes dataset-level context.
+All experiments use \textbf{CT-RATE}~\cite{hamamci2024foundation}, following the official train/validation/test split defined in the CT-RATE release. Table~\ref{tab:ctrate_stats} summarizes dataset-level context.
 
 \begin{table}[htbp]
     \centering
@@ -109,7 +109,7 @@ Here, CheXbert is the report-labeling evaluator and should not be conflated with
 
 Formal equations are provided in Appendix~\ref{appendix:metric_equations}. Chapter-level interpretation focuses on metric behavior and agreement patterns.
 
-\subsection{Metric Interpretation Policy}
+\subsection{Metric Interpretation Policy}\label{sec:metric_interpretation_policy}
 Model ranking is anchored on GREEN and RadGraph, then cross-checked with lexical-semantic metrics. CheXbert is reported but interpreted cautiously for organ-decomposed CT text because its design assumptions are closer to full-report label extraction workflows.
 Unless noted otherwise, internal metric values in this thesis are reported on a $0$--$100$ scale.
 
@@ -261,7 +261,6 @@ Table~\ref{tab:decoder_sanity} provides lightweight run diagnostics that complem
     \centering
     \caption{Decoder run diagnostics from official generated report files.}
     \label{tab:decoder_sanity}
-    \resizebox{\textwidth}{!}{%
     \begin{tabular}{lcc}
         \toprule
         \textbf{Decoder} & \textbf{Samples} & \textbf{Avg words/report} \\\midrule
@@ -271,7 +270,6 @@ Table~\ref{tab:decoder_sanity} provides lightweight run diagnostics that complem
         BioBART v3 & 1563 & 66.0 \\
         \bottomrule
     \end{tabular}
-    }
 \end{table}
 
 \begin{table}[htbp]
