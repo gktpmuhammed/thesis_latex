@@ -55,6 +55,8 @@ For 2D clinical radiology, development has accelerated in recent years~\cite{wan
 
 For 3D medical imaging, the challenge is more severe because volumetric data is large and paired text data is limited. Hamamci et al.~\cite{hamamci2024foundation} introduced CT-CLIP, a contrastive learning framework engineered for 3D computed tomography. Trained on the CT-RATE dataset, which pairs 3D volumetric CT scans with corresponding free-text radiology reports, CT-CLIP learns 3D structural visual representations aligned with clinical text. This work is among the earliest large-scale efforts to apply vision--language pretraining directly to volumetric medical data.
 
+Recent 3D CT work has moved beyond early chest-focused contrastive setups. Merlin~\cite{Blankemeier_2026} presents a CT foundation-model pipeline with paired abdominal CT, report text, and EHR signals, and evaluates transfer across several downstream tasks, including retrieval, report generation, and segmentation. HLIP~\cite{zhao2026scalablelanguageimagepretraining3d} addresses pretraining at larger clinical scale with a hierarchical attention scheme over slices, scans, and studies, showing that lower-curation clinical collections can still be useful for 3D language--image learning.
+
 MedGemma~\cite{yang2024medgemma} is a family of medical foundation models built on top of the Gemma architecture~\cite{team2024gemma}. It inherits the general-language capabilities of Gemma and adds continued medical pretraining and instruction tuning on biomedical literature, medical exams, and de-identified clinical notes. The instruction-tuned variant MedGemma-4B-IT reports strong zero-shot and few-shot performance on medical reasoning tasks. In this thesis, MedGemma serves as one of the core decoder families evaluated in the report-generation pipeline.
 
 %% ========================================================
@@ -123,6 +125,8 @@ The release of CT-RATE spurred the rapid development of several pioneering 3D mu
 \end{itemize}
 
 Recent work also emphasized fine-grained anatomical supervision for CT understanding. fVLM~\cite{shui2025fvlm} introduced large-scale and fine-grained vision-language pretraining for CT and reported strong gains on report-generation benchmarks. Its organ-aware supervision and decomposition perspective directly motivates the organ-guided decomposition strategy used in this thesis.
+
+Beyond strictly comparable CT-RATE leaderboard settings, Merlin~\cite{Blankemeier_2026} also explores anatomy-adapted report drafting inside a multitask CT foundation-model framework, supporting the trend toward structured generation. SimCroP~\cite{wang2025simcropradiographrepresentationlearning} focuses on chest CT representation learning rather than direct report generation, but its coarse-to-fine alignment strategy is still relevant here because clinically important findings are often spatially sparse and depend on precise local region--text grounding.
 
 A key challenge across these works is token compression. A raw 3D CT volume contains far more information than a 2D image, and naive patch extraction can produce tens of thousands of tokens that overwhelm the LLM decoder. Recent evidence~\cite{hamamci2025bettertokensbetter3d} shows that tokenization design is a primary performance driver in 3D VLMs: the paper highlights limitations of slice-wise tokenization and reports gains from compact volumetric tokens trained with a curriculum that includes local reconstruction, overlapping-window tiling, and long-context refinement.
 
