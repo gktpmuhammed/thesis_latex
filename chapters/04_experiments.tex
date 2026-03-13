@@ -4,7 +4,7 @@
 \subsection{Objectives and Research Questions}
 This chapter evaluates organ-aware 3D CT report generation under a consistent CT-RATE protocol. Results are organized by four research questions:
 \begin{itemize}
-    \item \textbf{RQ1 (Token Interface):} Does organ-token interface design improve report quality?
+    \item \textbf{RQ1 (Token-Interface Bundle):} Does the joint token-budget and interface design improve report quality?
     \item \textbf{RQ2 (Architecture):} Do heavier visual modules outperform the simpler masked cross-attention baseline?
     \item \textbf{RQ3 (Training Strategy):} How much do curriculum, hard-example, and imbalance policies change outcomes?
     \item \textbf{RQ4 (Decoder Family):} Under the same frontend, how do MedGemma, BERT-base, GPT-2, and BioBART compare?
@@ -54,14 +54,8 @@ Per-organ support is uneven in decomposed chest-CT reporting. Table~\ref{tab:org
         Pancreas & 57 & 3.65 \\
         Stomach & 20 & 1.28 \\
         \bottomrule
+    \end{tabular}
 \end{table}
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\textwidth]{figures/stacked_bar_alignment_training.png}
-    \caption{Alignment types of organ information in the training set. For each organ, scans are partitioned into cases where the organ is both visible and reported, visible but unreported, reported without visible support, or neither. The figure shows that several upper-abdominal organs are frequently present in chest CT but rarely mentioned in reports, motivating explicit empty-organ handling and imbalance-aware supervision.}
-    \label{fig:organ_presence_stacked}
-\end{figure}
 
 \subsection{Implementation and Optimization Defaults}
 Training/evaluation uses PyTorch, HuggingFace Transformers, and MONAI. Default optimization settings across training runs are listed in Table~\ref{tab:training_defaults}.
@@ -96,10 +90,10 @@ Table~\ref{tab:ablation_axes} defines the comparison axes used throughout this c
     \begin{tabular}{p{3.1cm}p{10.8cm}}
         \toprule
         \textbf{Axis} & \textbf{Variants} \\\midrule
-        Token and prefix design in the area lineage & Baseline-8T, Prefix-Stable-8T \\
+        Token-count + prefix-design bundle in the area lineage & Baseline-8T, Prefix-Stable-1T \\
         Mask-downsampling transition & Baseline-8T, MaxPool-8T \\
         Encoder architecture in the maxpool lineage & MaxPool-8T, Perceiver-Bridge, Multiscale-FPN, Align-v1, CNN-Align-v3 \\
-        Training strategy in the area lineage & Prefix-Stable-8T, Undersample-DefaultText, Weighted-Organ-Loss \\
+        Training strategy in the single-token area lineage & Prefix-Stable-1T, Undersample-DefaultText-1T, Weighted-Organ-Loss-1T \\
         Training strategy in the maxpool lineage & MaxPool-8T, Hard-Mining, Curriculum-2Phase \\
         Default-text phrasing as a strict pair & v3-Resized-DefaultText and v3-Resized-SynonymText \\
         Decoder family & MedGemma, BERT-base, GPT-2, and BioBART under shared organ-attention frontend \\
@@ -144,7 +138,7 @@ Table~\ref{tab:medgemma_ablation_main} reports the core MedGemma ablations, and 
         \toprule
         \textbf{Model} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{METEOR} & \textbf{ROUGE-L} & \textbf{CIDEr} & \textbf{BERTScore} & \textbf{RadGraph} & \textbf{CheXbert} & \textbf{RadCliQ} & \textbf{SRR-BERT} \\\midrule
         Baseline-8T & 32.3 & 9.2 & 32.8 & 34.1 & 4.1 & 56.7 & 24.3 & 23.9 & 103.7 & \textbf{33.0} \\
-        Prefix-Stable-8T & \textbf{34.8} & \textbf{10.5} & \textbf{34.4} & \textbf{37.9} & \textbf{8.4} & \textbf{59.6} & \textbf{26.8} & 2.6 & \textbf{110.4} & 32.4 \\
+        Prefix-Stable-1T & \textbf{34.8} & \textbf{10.5} & \textbf{34.4} & \textbf{37.9} & \textbf{8.4} & \textbf{59.6} & \textbf{26.8} & 2.6 & \textbf{110.4} & 32.4 \\
         Multiscale-FPN & 32.7 & 8.6 & 32.2 & 33.7 & 4.3 & 56.6 & 24.2 & 24.1 & 102.2 & 32.6 \\
         Perceiver-Bridge & 31.6 & 8.2 & 31.7 & 33.3 & 3.6 & 56.4 & 23.6 & 22.1 & 100.8 & 30.8 \\
         CNN-Align-v3 & 31.3 & 8.3 & 31.8 & 33.5 & 3.0 & 56.4 & 24.2 & 20.6 & 100.7 & 30.1 \\
@@ -164,11 +158,11 @@ Table~\ref{tab:medgemma_ablation_main} reports the core MedGemma ablations, and 
         \textbf{Model} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{METEOR} & \textbf{ROUGE-L} & \textbf{CIDEr} & \textbf{BERTScore} & \textbf{RadGraph} & \textbf{CheXbert} & \textbf{RadCliQ} & \textbf{SRR-BERT} \\\midrule
         Curriculum-2Phase & 19.4 & 3.2 & 25.0 & 25.0 & 1.8 & 50.7 & 13.3 & 26.9 & 77.3 & 32.2 \\
         Hard-Mining & 31.6 & 8.3 & 31.9 & 33.2 & 4.3 & 56.3 & 23.7 & 19.8 & 99.9 & 30.7 \\
-        Undersample-DefaultText & 31.8 & 8.2 & 31.6 & 33.4 & 2.8 & 56.3 & 23.7 & 20.3 & 100.0 & 29.7 \\
-        Weighted-Organ-Loss & 29.8 & 6.3 & 29.4 & 31.6 & 2.5 & 55.5 & 21.4 & 19.9 & 95.2 & 29.3 \\
+        Undersample-DefaultText-1T & 31.8 & 8.2 & 31.6 & 33.4 & 2.8 & 56.3 & 23.7 & 20.3 & 100.0 & 29.7 \\
+        Weighted-Organ-Loss-1T & 29.8 & 6.3 & 29.4 & 31.6 & 2.5 & 55.5 & 21.4 & 19.9 & 95.2 & 29.3 \\
         Align-v1 & 31.3 & 8.3 & 31.8 & 33.2 & 3.2 & 56.4 & 23.8 & 21.6 & 100.7 & 31.6 \\
         CNN-Align-v3 & 31.3 & 8.3 & 31.8 & 33.5 & 3.0 & 56.4 & 24.2 & 20.6 & 100.7 & 30.1 \\
-        Prefix-Stable-8T & \textbf{34.8} & \textbf{10.5} & \textbf{34.4} & \textbf{37.9} & \textbf{8.4} & \textbf{59.6} & \textbf{26.8} & 2.6 & \textbf{110.4} & 32.4 \\
+        Prefix-Stable-1T & \textbf{34.8} & \textbf{10.5} & \textbf{34.4} & \textbf{37.9} & \textbf{8.4} & \textbf{59.6} & \textbf{26.8} & 2.6 & \textbf{110.4} & 32.4 \\
         Baseline-8T & 32.3 & 9.2 & 32.8 & 34.1 & 4.1 & 56.7 & 24.3 & 23.9 & 103.7 & \textbf{33.0} \\
         MaxPool-8T & 32.0 & 8.6 & 32.2 & 33.8 & 3.5 & 56.6 & 24.1 & 21.3 & 102.0 & 31.6 \\
         Multiscale-FPN & 32.7 & 8.6 & 32.2 & 33.7 & 4.3 & 56.6 & 24.2 & \textbf{24.1} & 102.2 & 32.6 \\
@@ -178,10 +172,12 @@ Table~\ref{tab:medgemma_ablation_main} reports the core MedGemma ablations, and 
     }
 \end{table}
 
-\subsection{RQ1: Token Interface Design}
-RQ1 is answered positively. Prefix-Stable-8T is the strongest global model and improves both the primary clinical metrics and the lexical-semantic metrics relative to Baseline-8T. The strongest gains are concentrated in overall report quality and clinical structure signals, which supports the effect of interface stabilization.
+\subsection{RQ1: Token-Interface Bundle}
+RQ1 is answered positively at the bundle level. Prefix-Stable-1T is the strongest global model and improves both the primary clinical metrics and the lexical-semantic metrics relative to Baseline-8T.
 
-The same conclusion is supported by the mask-downsampling transition. MaxPool-8T remains close to Baseline-8T and does not produce comparable gains, so the main improvement is not explained by mask downsampling alone. The stronger effect comes from the stabilized visual-prefix design in Prefix-Stable-8T.
+This comparison changes more than one factor at once: token budget (8T to 1T) and prefix-stabilization components (sentinel wrapping and visual positional embeddings). Therefore, the gain is interpreted as a combined token-interface effect rather than a strict interface-only isolation.
+
+The mask-downsampling transition provides an orthogonal control inside the 8-token branch. MaxPool-8T remains close to Baseline-8T and does not reproduce the gain of Prefix-Stable-1T, which suggests mask downsampling alone is not the primary driver.
 
 \subsection{RQ2: Architecture Complexity}
 Table~\ref{tab:delta_vs_baseline} summarizes deltas against baseline for representative models. In the maxpool-derived architecture branch, heavier modules such as Perceiver, multiscale, and v3-alignment variants do not consistently outperform MaxPool-8T under the current training budget.
@@ -197,7 +193,7 @@ The practical interpretation is that complexity helps only in narrow cases under
     \begin{tabular}{lcccc}
         \toprule
         \textbf{Model} & $\Delta$GREEN & $\Delta$BLEU-4 & $\Delta$RadGraph & $\Delta$RadCliQ \\\midrule
-        Prefix-Stable-8T & +2.49 & +1.31 & +2.50 & +6.68 \\
+        Prefix-Stable-1T & +2.49 & +1.31 & +2.50 & +6.68 \\
         Multiscale-FPN & +0.45 & -0.65 & -0.15 & -1.56 \\
         Perceiver-Bridge & -0.70 & -0.99 & -0.68 & -2.98 \\
         CNN-Align-v3 & -0.97 & -0.98 & -0.09 & -3.02 \\
@@ -207,12 +203,12 @@ The practical interpretation is that complexity helps only in narrow cases under
     \end{tabular}
 \end{table}
 
-For strict within-branch interpretation, maxpool-derived variants should be compared against MaxPool-8T in Table~\ref{tab:medgemma_ablation_full}, while area-derived policy variants should be compared against Prefix-Stable-8T.
+For strict within-branch interpretation, maxpool-derived variants should be compared against MaxPool-8T in Table~\ref{tab:medgemma_ablation_full}, while single-token area-derived policy variants should be compared against Prefix-Stable-1T.
 
 \subsection{RQ3: Training Strategy}
-Training-policy interventions split into two branches. In the area-derived branch, Undersample-DefaultText and Weighted-Organ-Loss do not surpass Prefix-Stable-8T. In the maxpool-derived branch, Hard-Mining and Curriculum-2Phase do not surpass MaxPool-8T, and curriculum learning degrades most global metrics in the current two-phase configuration.
+Training-policy interventions split into two branches. In the single-token area-derived branch, Undersample-DefaultText-1T and Weighted-Organ-Loss-1T do not surpass Prefix-Stable-1T. In the maxpool-derived branch, Hard-Mining and Curriculum-2Phase do not surpass MaxPool-8T, and curriculum learning degrades most global metrics in the current two-phase configuration.
 
-In the area-derived branch, the gap to Prefix-Stable-8T is clear across clinical and lexical-semantic groups. Undersample-DefaultText trails the reference model, and Weighted-Organ-Loss trails further. These results suggest that imbalance-control policies alone do not recover the gain provided by a stronger interface.
+In the single-token area-derived branch, the gap to Prefix-Stable-1T is clear across clinical and lexical-semantic groups. Undersample-DefaultText-1T trails the reference model, and Weighted-Organ-Loss-1T trails further. These results suggest that imbalance-control policies alone do not recover the gain provided by the stronger single-token prefix configuration.
 
 In the maxpool-derived branch, Hard-Mining stays closer to MaxPool-8T but still remains below it on the primary quality signals. Curriculum-2Phase shows the largest overall regression in this branch. This likely reflects instability or underfitting under the current schedule rather than a generally negative verdict on curriculum ideas.
 
@@ -339,7 +335,7 @@ Cross-attention overlays are extracted with a dedicated visualization script and
         \IfFileExists{figures/attention/caseA_best.png}{
             \includegraphics[width=\linewidth]{figures/attention/caseA_best.png}
         }{
-            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Placeholder\\Case A best-model attention map\\Prefix-Stable-8T}}
+            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Placeholder\\Case A best-model attention map\\Prefix-Stable-1T}}
         }
         \caption*{(b) Best MedGemma variant}
     \end{minipage}
@@ -412,7 +408,7 @@ To enable direct comparison under the same protocol, this thesis includes a base
 Its quantitative row is now reported in Table~\ref{tab:decoder_comparison}, which enables direct protocol-matched comparison against the MedGemma, GPT-2, and BioBART runs.
 
 \section{Chapter Summary and Minimal Limitations Note}\label{sec:exp_summary}
-The strongest internal model under current protocol is Prefix-Stable-8T. The result pattern is consistent across RQ1 to RQ3: interface stabilization is more beneficial than heavier architectural modules or training-policy complexity at the current compute budget.
+The strongest internal model under current protocol is Prefix-Stable-1T. The result pattern is consistent across RQ1 to RQ3: the single-token plus prefix-stabilization bundle is more effective than heavier architectural modules or additional training-policy complexity at the current compute budget.
 
 The decoder axis for RQ4 now has complete standardized rows for all targeted decoder families in this thesis: MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART.
 

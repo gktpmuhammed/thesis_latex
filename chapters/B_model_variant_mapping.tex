@@ -4,6 +4,8 @@
 This appendix maps the short model names used in Chapters~\ref{chapter:methodology}, \ref{chapter:experiments}, and \ref{chapter:discussion} to the raw run IDs in the experiment folders.
 
 \section{Main Retraining Set}
+This section lists the display names used throughout the thesis and maps them to raw run identifiers in the main retraining artifact set.
+It serves as the canonical reference for reproducible model-to-artifact lookup.
 \begin{table}[htbp]
     \centering
     \small
@@ -13,7 +15,7 @@ This appendix maps the short model names used in Chapters~\ref{chapter:methodolo
         \toprule
         \textbf{Display Name} & \textbf{Raw Run ID} & \textbf{Axis} & \textbf{Main Difference} \\\midrule
         Baseline-8T & \path{medical_vlm_8_tokens_full} & Token/bridge & 8 tokens per organ baseline \\
-        Prefix-Stable-8T & \path{medgemma_lora_vis_token_pos_embed} & Token/bridge & Visual positional embeddings and sentinel-wrapped visual prefix \\
+        Prefix-Stable-1T & \path{medgemma_lora_vis_token_pos_embed} & Token/bridge & Single-token interface with visual positional embeddings and sentinel-wrapped visual prefix \\
         MaxPool-8T & \path{medical_vlm_8_tokens_full_maxpool} & Token/bridge & Max-pooling mask downsampling before token-grid attention \\
         Perceiver-Bridge & \path{perceiver_resampler} & Architecture & Perceiver-style stacked self/cross attention for visual aggregation \\
         Multiscale-FPN & \path{multiscale_vit_fpn} & Architecture & Multiscale fusion of intermediate ViT features \\
@@ -21,13 +23,15 @@ This appendix maps the short model names used in Chapters~\ref{chapter:methodolo
         Align-v1 & \path{medgemma_alignment_v1} & Architecture & Alignment objective variant without full v3 stack \\
         Hard-Mining & \path{hard_example_mining} & Training policy & Weighted sampler emphasizing difficult samples \\
         Curriculum-2Phase & \path{curriculum_learning} & Training policy & Pathology-first phase followed by full-data phase \\
-        Undersample-DefaultText & \path{lora_with_vis_tokens_pos_embed_undersampling} & Training policy & Reduced keep probability for default empty-organ text \\
-        Weighted-Organ-Loss & \path{lora_with_vis_tokens_pos_embed_weight_loss} & Training policy & Organ-wise and label-type loss weighting \\
+        Undersample-DefaultText-1T & \path{lora_with_vis_tokens_pos_embed_undersampling} & Training policy & Single-token branch with reduced keep probability for default empty-organ text \\
+        Weighted-Organ-Loss-1T & \path{lora_with_vis_tokens_pos_embed_weight_loss} & Training policy & Single-token branch with organ-wise and label-type loss weighting \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 \section{Text-Policy Set (Legacy)}
+This section maps the legacy text-policy comparison runs used for the strict default-vs-synonym analysis.
+These entries are kept separate from the main retraining set to avoid mixing experiment cohorts.
 \begin{table}[htbp]
     \centering
     \small
@@ -45,6 +49,14 @@ This appendix maps the short model names used in Chapters~\ref{chapter:methodolo
 \section{Legacy Aliases and Implementation-Only Variant}
 \begin{itemize}
     \item \path{medgemma_vlm_8_tokens_full} is an older naming alias of the Baseline-8T branch in legacy result exports.
-    \item \path{lora_with_vis_tokens_pos_embed} is an older naming alias of the Prefix-Stable-8T branch in legacy result exports.
+    \item \path{lora_with_vis_tokens_pos_embed} is an older naming alias of the Prefix-Stable-1T branch in legacy result exports.
     \item \path{medgemma_lora_vis_token} corresponds to a single-token interface prototype (Baseline-1T) kept for implementation comparison; it is not included in the standardized retraining metric tables.
 \end{itemize}
+
+\section{Validation Split Coverage Alignment}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/stacked_bar_alignment_validation.png}
+    \caption{Alignment types of organ information in the CT-RATE validation split. For each organ, scans are partitioned into cases where the organ is both visible and reported, visible but unreported, reported without visible support, or neither.}
+    \label{fig:organ_presence_stacked_validation}
+\end{figure}

@@ -3,15 +3,16 @@
 This chapter interprets the evidence from Chapter~\ref{chapter:experiments}. The goal is to explain why the observed ranking emerged, which conclusions are robust, and where claims should be bounded.
 
 \section{Why Interface Design Dominated}
-Empirical signal. Within MedGemma ablations, the strongest model, Prefix-Stable-8T, improves core global metrics such as GREEN, RadGraph, BLEU-4, ROUGE-L, BERTScore, and RadCliQ over Baseline-8T. By contrast, heavier variants show mixed or negative deltas despite higher nominal capacity.
+Empirical signal. Within MedGemma ablations, the strongest model, Prefix-Stable-1T, improves core global metrics such as GREEN, RadGraph, BLEU-4, ROUGE-L, BERTScore, and RadCliQ over Baseline-8T. By contrast, heavier variants show mixed or negative deltas despite higher nominal capacity.
+For this pair, the gain should be read as a bundled token-interface effect because token count (8T vs 1T) and prefix design both change.
 
-Mechanistic interpretation. Three interface components appear decisive:
+Mechanistic interpretation. Three interface components in this bundled setup appear decisive:
 \begin{enumerate}
     \item explicit visual token delimitation (sentinel wrapping),
     \item consistent positional encoding over visual prefix tokens,
     \item stabilized projection into decoder embedding scale.
 \end{enumerate}
-Together they reduce ambiguity between visual context and textual instruction/response tokens.
+Together they reduce ambiguity between visual context and textual instruction/response tokens. Since token count also changes in the strongest pair, these mechanisms are interpreted as plausible contributors rather than cleanly isolated factors.
 
 Negative ablations in context. Perceiver-style resampling and multiscale fusion are not intrinsically weak. Under the current low effective batch, long context, and short training budget, their additional complexity likely increases optimization burden more than it improves report-level factuality.
 
@@ -52,6 +53,7 @@ Compared with many 2D report-generation settings, 3D CT introduces higher token 
 
 \section{Validity and Limits}
 Internal validity is strongest for MedGemma-family comparisons because data interfaces and evaluation pipelines are controlled. Decoder-family conclusions are now grounded by completed MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART rows under one protocol.
+For RQ1 specifically, strict causal attribution to interface stabilization alone is limited because the top comparison jointly changes token budget and prefix structure.
 
 Findings are specific to organ-decomposed chest-CT reporting and should not be over-generalized to other modalities or report styles without controlled replication.
 

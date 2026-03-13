@@ -5,7 +5,7 @@ This thesis studied organ-aware radiology report generation from 3D chest CT wit
 
 The implemented framework combined organ-level supervision via report decomposition, organ-conditioned visual token extraction, and decoder adaptation under a consistent evaluation protocol. The evidence now includes systematic MedGemma ablations and completed decoder-family rows for MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART under the same evaluation pass.
 
-The main empirical conclusion is concise: in this setting, stable visual-language interfacing is more decisive than increasing architectural complexity. Within MedGemma ablations, the strongest model variant used explicit visual-prefix structuring and delivered the most consistent improvements on the primary global metrics used in this thesis. Cross-decoder analysis also shows that stronger aggregate lexical-semantic metrics can coexist with higher template reuse, so deployment-oriented interpretation must include diversity and structure diagnostics in addition to metric averages.
+The main empirical conclusion is concise: in this setting, the combined choice of token budget and stable visual-language interfacing is more decisive than increasing architectural complexity. Within MedGemma ablations, the strongest model variant used a single-token visual interface with explicit visual-prefix structuring and delivered the most consistent improvements on the primary global metrics used in this thesis. Cross-decoder analysis also shows that stronger aggregate lexical-semantic metrics can coexist with higher template reuse, so deployment-oriented interpretation must include diversity and structure diagnostics in addition to metric averages.
 
 Overall, the thesis contributes:
 \begin{itemize}
@@ -21,7 +21,7 @@ The work therefore advances both method (how to structure the task) and practice
 The thesis can be reduced to four practical takeaways:
 \begin{enumerate}
     \item Organ-aware decomposition is not only a data-format choice; it is a training signal that makes failure analysis and controllable generation feasible.
-    \item In 3D CT report generation, token/interface design can matter more than adding architectural complexity.
+    \item In 3D CT report generation, token budget and interface design can matter more than adding architectural complexity.
     \item Multi-metric evaluation is mandatory; single-metric optimization is too fragile for clinical text generation claims.
     \item Reproducible artifact discipline (\texttt{generated\_reports*.csv} + \texttt{metrics\_final.csv}) is essential for trustworthy model comparison.
 \end{enumerate}

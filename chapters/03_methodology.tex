@@ -94,24 +94,13 @@ During training, each organ is paired with an organ-specific prompt. MedGemma br
 \subsection{Organ Visibility and Report Presence Distribution}
 Although CT-RATE is a chest CT dataset, upper-abdominal organs appear in a non-trivial subset of studies. To make this explicit, we report organ visibility across the dataset and organ-level report presence after decomposition.
 
-The first distribution is computed from segmentation masks and measures how often each organ is visually present. The second distribution is computed from decomposed report targets and measures how often each organ receives a report entry. Comparing the two distributions helps separate visual sparsity from text-label sparsity and directly motivates the empty-organ handling and imbalance-control strategies used later in training.
+For each organ, studies in the training split are partitioned into four alignment cases: visible and reported, visible but unreported, reported without visible support, and neither. This joint view separates visual sparsity from text-label sparsity and directly motivates the empty-organ handling and imbalance-control strategies used later in training.
 
 \begin{figure}[htbp]
     \centering
-    \fbox{\parbox[c][45mm][c]{0.9\linewidth}{\centering
-    Placeholder figure\\
-    Organ visibility distribution across CT-RATE}}
-    \caption{Organ visibility distribution across CT-RATE, measured as the fraction of studies with a non-empty organ mask.}
-    \label{fig:organ_visibility_distribution}
-\end{figure}
-
-\begin{figure}[htbp]
-    \centering
-    \fbox{\parbox[c][45mm][c]{0.9\linewidth}{\centering
-    Placeholder figure\\
-    Organ-level report presence distribution across CT-RATE}}
-    \caption{Organ-level report presence distribution across CT-RATE, measured from decomposed report targets.}
-    \label{fig:organ_report_presence_distribution}
+    \includegraphics[width=\textwidth]{figures/stacked_bar_alignment_training.png}
+    \caption{Alignment types of organ information in the CT-RATE training split. For each organ, scans are partitioned into cases where the organ is both visible and reported, visible but unreported, reported without visible support, or neither. Several upper-abdominal organs are frequently present in chest CT but rarely mentioned in reports.}
+    \label{fig:organ_presence_stacked}
 \end{figure}
 \section{Model Architecture}\label{sec:method_architecture}
 \begin{figure}[htbp]
@@ -171,7 +160,7 @@ Table~\ref{tab:model_matrix_method} summarizes the major variants with concise d
         \toprule
         \textbf{Variant} & \textbf{Main Design Choice} \\\midrule
         Baseline-8T & Baseline MedGemma branch with 8 organ tokens, masked cross-attention, projector, and weighted LM training. \\
-        Prefix-Stable-8T & Adds visual positional embeddings and explicit visual sentinel wrapping; strongest global performance in current runs. \\
+        Prefix-Stable-1T & Single-token (1T) variant with visual positional embeddings and explicit visual sentinel wrapping; strongest global performance in current runs. \\
         MaxPool-8T & Keeps the baseline design but changes mask downsampling to max pooling before token-grid attention. \\
         Perceiver-Bridge & Replaces single cross-attention with stacked Perceiver-style self/cross-attention blocks. \\
         Multiscale-FPN & Fuses intermediate ViT features from multiple depths before organ-query attention. \\
@@ -179,8 +168,8 @@ Table~\ref{tab:model_matrix_method} summarizes the major variants with concise d
         Align-v1 & Adds alignment regularization without the full v3 architectural stack. \\
         Curriculum-2Phase & Two-phase pathology-first curriculum before full-distribution training. \\
         Hard-Mining & Dynamic weighted sampler emphasizing high-loss samples. \\
-        Undersample-DefaultText & Reduces training exposure to default empty-organ text via organ-specific keep probabilities. \\
-        Weighted-Organ-Loss & Reweights loss contributions for explicit versus default organ statements. \\
+        Undersample-DefaultText-1T & Single-token prefix-stable branch with reduced exposure to default empty-organ text via organ-specific keep probabilities. \\
+        Weighted-Organ-Loss-1T & Single-token prefix-stable branch with reweighted loss contributions for explicit versus default organ statements. \\
         BERT-base / GPT-2 / BioBART branches & Same organ-attention encoder interface with decoder-family adaptation for cross-family comparison. \\
         \bottomrule
     \end{tabular}
@@ -189,10 +178,10 @@ Table~\ref{tab:model_matrix_method} summarizes the major variants with concise d
 \subsection{Controlled Comparison Groups}
 To keep interpretation focused, we organize results by groups where one factor is changed at a time.
 \begin{itemize}
-    \item Interface group (area mask downsampling): Baseline-8T and Prefix-Stable-8T isolate visual-prefix design under the same area-based mask-to-token mapping.
+    \item Interface bundle group (area mask downsampling): Baseline-8T and Prefix-Stable-1T compare token-count and visual-prefix design changes under the same area-based mask-to-token mapping.
     \item Mask-downsampling transition: Baseline-8T and MaxPool-8T isolate the effect of switching mask downsampling from area interpolation to max pooling.
     \item Architecture group (maxpool lineage): MaxPool-8T, Perceiver-Bridge, Multiscale-FPN, Align-v1, and CNN-Align-v3 isolate visual-backbone and bridge choices under a shared maxpool-based interface.
-    \item Training-policy group (area lineage): Prefix-Stable-8T, Undersample-DefaultText, and Weighted-Organ-Loss isolate optimization and imbalance-control choices in the area-based branch.
+    \item Training-policy group (single-token area lineage): Prefix-Stable-1T, Undersample-DefaultText-1T, and Weighted-Organ-Loss-1T isolate optimization and imbalance-control choices under the same single-token prefix architecture.
     \item Training-policy group (maxpool lineage): MaxPool-8T, Hard-Mining, and Curriculum-2Phase isolate optimization-policy effects in the maxpool-based branch.
     \item No-findings text-policy group: v3-Resized-DefaultText and v3-Resized-SynonymText share the same v3-resized backbone and differ only in default empty-organ phrasing.
     \item Decoder-family group: MedGemma, BERT-base, GPT-2, and BioBART use the same organ-attention visual frontend for cross-decoder comparison.
