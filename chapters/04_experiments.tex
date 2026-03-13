@@ -54,8 +54,14 @@ Per-organ support is uneven in decomposed chest-CT reporting. Table~\ref{tab:org
         Pancreas & 57 & 3.65 \\
         Stomach & 20 & 1.28 \\
         \bottomrule
-    \end{tabular}
 \end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/stacked_bar_alignment_training.png}
+    \caption{Alignment types of organ information in the training set. For each organ, scans are partitioned into cases where the organ is both visible and reported, visible but unreported, reported without visible support, or neither. The figure shows that several upper-abdominal organs are frequently present in chest CT but rarely mentioned in reports, motivating explicit empty-organ handling and imbalance-aware supervision.}
+    \label{fig:organ_presence_stacked}
+\end{figure}
 
 \subsection{Implementation and Optimization Defaults}
 Training/evaluation uses PyTorch, HuggingFace Transformers, and MONAI. Default optimization settings across training runs are listed in Table~\ref{tab:training_defaults}.
