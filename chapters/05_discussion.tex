@@ -4,7 +4,7 @@ This chapter interprets the evidence from Chapter~\ref{chapter:experiments}. The
 
 \section{Why Interface and Token Count Dominated}
 Empirical signal. Within MedGemma ablations under the matched protocol, Base-8T is strongest on the primary global metrics and improves GREEN, RadGraph, BLEU-4, ROUGE-L, BERTScore, and RadCliQ over Base-1T. By contrast, heavier variants show mixed or negative deltas despite higher nominal capacity.
-For this pair, the gain can be interpreted as a token-count effect because Base-1T and Base-8T share the same stable-prefix interface and training-policy setup.
+For this pair, the gain can be interpreted as a token-count effect because Base-1T and Base-8T share the same stable-prefix interface and training-policy setup. This is a within-MedGemma result and is separate from the cross-decoder ranking in Table~\ref{tab:decoder_comparison}.
 
 Mechanistic interpretation. A plausible explanation is that stable interface components reduce ambiguity at the visual-text boundary:
 \begin{enumerate}
