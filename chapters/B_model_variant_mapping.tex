@@ -3,35 +3,34 @@
 
 This appendix maps the short model names used in Chapters~\ref{chapter:methodology}, \ref{chapter:experiments}, and \ref{chapter:discussion} to the raw run IDs in the experiment folders.
 
-\section{Main Retraining Set}
-This section lists the display names used throughout the thesis and maps them to raw run identifiers in the main retraining artifact set.
+\section{Main Training Set}
+This section lists the display names used throughout the thesis and maps them to raw run identifiers in the main training artifact set.
 It serves as the canonical reference for reproducible model-to-artifact lookup.
 \begin{table}[htbp]
     \centering
     \small
-    \caption{Display-name mapping for the main retraining result set (\texttt{results\_retrain}).}
+    \caption{Display-name mapping for the main training result set (\texttt{results\_retrain}).}
     \label{tab:appendix_variant_mapping_main}
     \begin{tabular}{p{3.2cm}p{4.7cm}p{2.6cm}p{3.8cm}}
         \toprule
         \textbf{Display Name} & \textbf{Raw Run ID} & \textbf{Axis} & \textbf{Main Difference} \\\midrule
-        Baseline-8T & \path{medical_vlm_8_tokens_full} & Token/bridge & 8 tokens per organ baseline \\
-        Prefix-Stable-1T & \path{medgemma_lora_vis_token_pos_embed} & Token/bridge & Single-token interface with visual positional embeddings and sentinel-wrapped visual prefix \\
+        Base-1T & \path{medgemma_lora_vis_token_pos_embed_1tokens} & Token/bridge & Stable-prefix baseline with 1 organ token \\
+        Base-8T & \path{medgemma_lora_vis_token_pos_embed_8tokens} & Token/bridge & Same stable-prefix baseline with 8 organ tokens \\
         MaxPool-8T & \path{medical_vlm_8_tokens_full_maxpool} & Token/bridge & Max-pooling mask downsampling before token-grid attention \\
-        Perceiver-Bridge & \path{perceiver_resampler} & Architecture & Perceiver-style stacked self/cross attention for visual aggregation \\
-        Multiscale-FPN & \path{multiscale_vit_fpn} & Architecture & Multiscale fusion of intermediate ViT features \\
-        CNN-Align-v3 & \path{medgemma_architecture_v3} & Architecture & CNN stem and alignment regularization \\
-        Align-v1 & \path{medgemma_alignment_v1} & Architecture & Alignment objective variant without full v3 stack \\
-        Hard-Mining & \path{hard_example_mining} & Training policy & Weighted sampler emphasizing difficult samples \\
-        Curriculum-2Phase & \path{curriculum_learning} & Training policy & Pathology-first phase followed by full-data phase \\
-        Undersample-DefaultText-1T & \path{lora_with_vis_tokens_pos_embed_undersampling} & Training policy & Single-token branch with reduced keep probability for default empty-organ text \\
-        Weighted-Organ-Loss-1T & \path{lora_with_vis_tokens_pos_embed_weight_loss} & Training policy & Single-token branch with organ-wise and label-type loss weighting \\
+        Perceiver-8T & \path{perceiver_resampler} & Architecture & Perceiver-style stacked self/cross attention for visual aggregation \\
+        Multiscale-8T & \path{multiscale_vit_fpn} & Architecture & Multiscale fusion of intermediate ViT features \\
+        CNNAlign-8T & \path{medgemma_architecture_v3} & Architecture & CNN stem and alignment regularization \\
+        Align-8T & \path{medgemma_alignment_v1} & Architecture & Alignment objective variant without full CNN+alignment stack \\
+        HardMining-8T & \path{hard_example_mining} & Training policy & Weighted sampler emphasizing difficult samples \\
+        Curriculum-8T & \path{curriculum_learning} & Training policy & Pathology-first phase followed by full-data phase \\
+        WeightedLoss-1T & \path{lora_with_vis_tokens_pos_embed_weight_loss} & Training policy & Single-token branch with organ-wise and label-type loss weighting \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 \section{Text-Policy Set (Legacy)}
 This section maps the legacy text-policy comparison runs used for the strict default-vs-synonym analysis.
-These entries are kept separate from the main retraining set to avoid mixing experiment cohorts.
+These entries are kept separate from the main training set to avoid mixing experiment cohorts.
 \begin{table}[htbp]
     \centering
     \small
@@ -40,18 +39,43 @@ These entries are kept separate from the main retraining set to avoid mixing exp
     \begin{tabular}{p{3.8cm}p{5.0cm}p{4.9cm}}
         \toprule
         \textbf{Display Name} & \textbf{Raw Run ID} & \textbf{Comparability Note} \\\midrule
-        v3-Resized-DefaultText & \path{medgemma_architecture_v3_resized} & Baseline for strict default-vs-synonym comparison \\
-        v3-Resized-SynonymText & \path{medgemma_architecture_v3_resized_synonyms} & Strict pair with v3-Resized-DefaultText \\
+        DefaultText & \path{medgemma_architecture_v3_resized} & Baseline for strict default-vs-synonym comparison \\
+        SynonymText & \path{medgemma_architecture_v3_resized_synonyms} & Strict pair with DefaultText \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 \section{Legacy Aliases and Implementation-Only Variant}
 \begin{itemize}
-    \item \path{medgemma_vlm_8_tokens_full} is an older naming alias of the Baseline-8T branch in legacy result exports.
-    \item \path{lora_with_vis_tokens_pos_embed} is an older naming alias of the Prefix-Stable-1T branch in legacy result exports.
-    \item \path{medgemma_lora_vis_token} corresponds to a single-token interface prototype (Baseline-1T) kept for implementation comparison; it is not included in the standardized retraining metric tables.
+    \item \path{medical_vlm_8_tokens_full} is a deprecated duplicate branch of the current Base-8T setup and is excluded from active comparison tables.
+    \item \path{lora_with_vis_tokens_pos_embed} and \path{medgemma_lora_vis_token_pos_embed} are older naming aliases of the Base-1T branch in legacy result exports.
+    \item \path{medgemma_lora_vis_token} corresponds to a single-token interface prototype (Base-1T) kept for implementation comparison; it is not included in the standardized training metric tables.
 \end{itemize}
+
+\section{Component Presence Matrix (Training Set Only)}
+\begin{table}[htbp]
+    \centering
+    \scriptsize
+    \caption{Compact component matrix for the active MedGemma comparison set, ordered from older to newer within this subset. `Token` is the per-organ visual token count, `Pooling` is mask-to-token downsampling mode, `Visual Bridge` marks how visual features are aggregated (including CNN stem usage), and `Training Policy` summarizes additional interventions beyond the shared baseline pipeline.}
+    \label{tab:appendix_component_presence_matrix}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{cp{4.9cm}ccp{2.9cm}lc}
+        \toprule
+        \textbf{\#} & \textbf{Raw Run ID} & \textbf{Token} & \textbf{Pooling} & \textbf{Visual Bridge} & \textbf{Training Policy} & \textbf{Align} \\\midrule
+        1  & \path{medgemma_lora_vis_token_pos_embed_1tokens} & 1 & Interpolation & Direct & None &  \\
+        2  & \path{medgemma_lora_vis_token_pos_embed_8tokens} & 8 & Interpolation & Direct & None &  \\
+        3  & \path{lora_with_vis_tokens_pos_embed_weight_loss} & 1 & Interpolation & Direct & Weighted loss &  \\
+        4  & \path{medical_vlm_8_tokens_full_maxpool} & 8 & Maxpooling & Direct & None &  \\
+        5  & \path{perceiver_resampler} & 8 & Maxpooling & Perceiver resampler & None &  \\
+        6  & \path{multiscale_vit_fpn} & 8 & Maxpooling & Multiscale FPN & None &  \\
+        7  & \path{hard_example_mining} & 8 & Maxpooling & Direct & Hard mining &  \\
+        8  & \path{curriculum_learning} & 8 & Maxpooling & Direct & Curriculum &  \\
+        9  & \path{medgemma_alignment_v1} & 8 & Maxpooling & Direct & None & X \\
+        10 & \path{medgemma_architecture_v3} & 8 & Maxpooling & Direct + CNN stem & None & X \\
+        \bottomrule
+    \end{tabular}
+    }
+\end{table}
 
 \section{Validation Split Coverage Alignment}
 \begin{figure}[htbp]

@@ -90,12 +90,12 @@ Table~\ref{tab:ablation_axes} defines the comparison axes used throughout this c
     \begin{tabular}{p{3.1cm}p{10.8cm}}
         \toprule
         \textbf{Axis} & \textbf{Variants} \\\midrule
-        Token-count + prefix-design bundle in the area lineage & Baseline-8T, Prefix-Stable-1T \\
-        Mask-downsampling transition & Baseline-8T, MaxPool-8T \\
-        Encoder architecture in the maxpool lineage & MaxPool-8T, Perceiver-Bridge, Multiscale-FPN, Align-v1, CNN-Align-v3 \\
-        Training strategy in the single-token area lineage & Prefix-Stable-1T, Undersample-DefaultText-1T, Weighted-Organ-Loss-1T \\
-        Training strategy in the maxpool lineage & MaxPool-8T, Hard-Mining, Curriculum-2Phase \\
-        Default-text phrasing as a strict pair & v3-Resized-DefaultText and v3-Resized-SynonymText \\
+        Token-count control in stable-prefix lineage & Base-1T, Base-8T \\
+        Mask-downsampling transition & Base-8T, MaxPool-8T \\
+        Encoder architecture in the maxpool lineage & MaxPool-8T, Perceiver-8T, Multiscale-8T, Align-8T, CNNAlign-8T \\
+        Training strategy in the single-token area lineage & Base-1T and WeightedLoss-1T \\
+        Training strategy in the maxpool lineage & MaxPool-8T, HardMining-8T, Curriculum-8T \\
+        Default-text phrasing as a strict pair & DefaultText and SynonymText \\
         Decoder family & MedGemma, BERT-base, GPT-2, and BioBART under shared organ-attention frontend \\
         Protocol-matched baseline & fVLM-aligned encoder setup on CT-RATE with a BERT-base decoder~\cite{shui2025fvlm} \\
         \bottomrule
@@ -121,6 +121,7 @@ All checkpoints are evaluated with one standardized workflow: report generation,
 Metric definitions and table semantics are fixed before comparison. As a result, every experiment in this chapter is interpreted under the same scoring rules.
 
 Quantitative claims are drawn only from official runs produced under this shared protocol. MedGemma ablations, text-policy comparisons, and decoder-family comparisons all follow the same data split, preprocessing assumptions, and evaluation pipeline.
+Within each comparison block, decoding policy is also matched (beam/sampling and length constraints).
 
 \subsection{Qualitative Protocol for Attention Maps}
 Cross-attention maps are interpreted with the following checks: spatial overlap with the queried organ mask, compactness vs diffusion, stability across planes, and false activation in anatomically confounding neighbors.
@@ -137,12 +138,13 @@ Table~\ref{tab:medgemma_ablation_main} reports the core MedGemma ablations, and 
     \begin{tabular}{lcccccccccc}
         \toprule
         \textbf{Model} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{METEOR} & \textbf{ROUGE-L} & \textbf{CIDEr} & \textbf{BERTScore} & \textbf{RadGraph} & \textbf{CheXbert} & \textbf{RadCliQ} & \textbf{SRR-BERT} \\\midrule
-        Baseline-8T & 32.3 & 9.2 & 32.8 & 34.1 & 4.1 & 56.7 & 24.3 & 23.9 & 103.7 & \textbf{33.0} \\
-        Prefix-Stable-1T & \textbf{34.8} & \textbf{10.5} & \textbf{34.4} & \textbf{37.9} & \textbf{8.4} & \textbf{59.6} & \textbf{26.8} & 2.6 & \textbf{110.4} & 32.4 \\
-        Multiscale-FPN & 32.7 & 8.6 & 32.2 & 33.7 & 4.3 & 56.6 & 24.2 & 24.1 & 102.2 & 32.6 \\
-        Perceiver-Bridge & 31.6 & 8.2 & 31.7 & 33.3 & 3.6 & 56.4 & 23.6 & 22.1 & 100.8 & 30.8 \\
-        CNN-Align-v3 & 31.3 & 8.3 & 31.8 & 33.5 & 3.0 & 56.4 & 24.2 & 20.6 & 100.7 & 30.1 \\
-        Curriculum-2Phase & 19.4 & 3.2 & 25.0 & 25.0 & 1.8 & 50.7 & 13.3 & \textbf{26.9} & 77.3 & 32.2 \\
+        Base-1T & 31.6 & 8.3 & 31.8 & 33.5 & 2.5 & 56.4 & 23.9 & 18.4 & 100.2 & 28.9 \\
+        Base-8T & \textbf{32.8} & \textbf{8.8} & \textbf{32.5} & \textbf{34.4} & 4.1 & \textbf{56.9} & \textbf{24.6} & 22.7 & \textbf{104.1} & \textbf{32.7} \\
+        MaxPool-8T & 32.0 & 8.6 & 32.2 & 33.8 & 3.5 & 56.6 & 24.1 & 21.3 & 102.0 & 31.6 \\
+        Multiscale-8T & 32.7 & 8.6 & 32.2 & 33.7 & \textbf{4.3} & 56.6 & 24.2 & 24.1 & 102.2 & 32.6 \\
+        Perceiver-8T & 31.6 & 8.2 & 31.7 & 33.3 & 3.6 & 56.4 & 23.6 & 22.1 & 100.8 & 30.8 \\
+        CNNAlign-8T & 31.3 & 8.3 & 31.8 & 33.5 & 3.0 & 56.4 & 24.2 & 20.6 & 100.7 & 30.1 \\
+        Curriculum-8T & 19.4 & 3.2 & 25.0 & 25.0 & 1.8 & 50.7 & 13.3 & \textbf{26.9} & 77.3 & 32.2 \\
         \bottomrule
     \end{tabular}
     }
@@ -156,89 +158,92 @@ Table~\ref{tab:medgemma_ablation_main} reports the core MedGemma ablations, and 
     \begin{tabular}{lcccccccccc}
         \toprule
         \textbf{Model} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{METEOR} & \textbf{ROUGE-L} & \textbf{CIDEr} & \textbf{BERTScore} & \textbf{RadGraph} & \textbf{CheXbert} & \textbf{RadCliQ} & \textbf{SRR-BERT} \\\midrule
-        Curriculum-2Phase & 19.4 & 3.2 & 25.0 & 25.0 & 1.8 & 50.7 & 13.3 & 26.9 & 77.3 & 32.2 \\
-        Hard-Mining & 31.6 & 8.3 & 31.9 & 33.2 & 4.3 & 56.3 & 23.7 & 19.8 & 99.9 & 30.7 \\
-        Undersample-DefaultText-1T & 31.8 & 8.2 & 31.6 & 33.4 & 2.8 & 56.3 & 23.7 & 20.3 & 100.0 & 29.7 \\
-        Weighted-Organ-Loss-1T & 29.8 & 6.3 & 29.4 & 31.6 & 2.5 & 55.5 & 21.4 & 19.9 & 95.2 & 29.3 \\
-        Align-v1 & 31.3 & 8.3 & 31.8 & 33.2 & 3.2 & 56.4 & 23.8 & 21.6 & 100.7 & 31.6 \\
-        CNN-Align-v3 & 31.3 & 8.3 & 31.8 & 33.5 & 3.0 & 56.4 & 24.2 & 20.6 & 100.7 & 30.1 \\
-        Prefix-Stable-1T & \textbf{34.8} & \textbf{10.5} & \textbf{34.4} & \textbf{37.9} & \textbf{8.4} & \textbf{59.6} & \textbf{26.8} & 2.6 & \textbf{110.4} & 32.4 \\
-        Baseline-8T & 32.3 & 9.2 & 32.8 & 34.1 & 4.1 & 56.7 & 24.3 & 23.9 & 103.7 & \textbf{33.0} \\
+        Curriculum-8T & 19.4 & 3.2 & 25.0 & 25.0 & 1.8 & 50.7 & 13.3 & 26.9 & 77.3 & 32.2 \\
+        HardMining-8T & 31.6 & 8.3 & 31.9 & 33.2 & 4.3 & 56.3 & 23.7 & 19.8 & 99.9 & 30.7 \\
+        WeightedLoss-1T & 29.8 & 6.3 & 29.4 & 31.6 & 2.5 & 55.5 & 21.4 & 19.9 & 95.2 & 29.3 \\
+        Align-8T & 31.3 & 8.3 & 31.8 & 33.2 & 3.2 & 56.4 & 23.8 & 21.6 & 100.7 & 31.6 \\
+        CNNAlign-8T & 31.3 & 8.3 & 31.8 & 33.5 & 3.0 & 56.4 & 24.2 & 20.6 & 100.7 & 30.1 \\
+        Base-1T & 31.6 & 8.3 & 31.8 & 33.5 & 2.5 & 56.4 & 23.9 & 18.4 & 100.2 & 28.9 \\
+        Base-8T & \textbf{32.8} & \textbf{8.8} & \textbf{32.5} & \textbf{34.4} & 4.1 & \textbf{56.9} & \textbf{24.6} & 22.7 & \textbf{104.1} & \textbf{32.7} \\
         MaxPool-8T & 32.0 & 8.6 & 32.2 & 33.8 & 3.5 & 56.6 & 24.1 & 21.3 & 102.0 & 31.6 \\
-        Multiscale-FPN & 32.7 & 8.6 & 32.2 & 33.7 & 4.3 & 56.6 & 24.2 & \textbf{24.1} & 102.2 & 32.6 \\
-        Perceiver-Bridge & 31.6 & 8.2 & 31.7 & 33.3 & 3.6 & 56.4 & 23.6 & 22.1 & 100.8 & 30.8 \\
+        Multiscale-8T & 32.7 & 8.6 & 32.2 & 33.7 & 4.3 & 56.6 & 24.2 & \textbf{24.1} & 102.2 & 32.6 \\
+        Perceiver-8T & 31.6 & 8.2 & 31.7 & 33.3 & 3.6 & 56.4 & 23.6 & 22.1 & 100.8 & 30.8 \\
         \bottomrule
     \end{tabular}
     }
 \end{table}
 
 \subsection{RQ1: Token-Interface Bundle}
-RQ1 is answered positively at the bundle level. Prefix-Stable-1T is the strongest global model and improves both the primary clinical metrics and the lexical-semantic metrics relative to Baseline-8T.
+RQ1 is answered with a strict token-count control inside the same stable-prefix branch. Base-8T outperforms Base-1T on GREEN, BLEU-4, ROUGE-L, BERTScore, RadGraph, and RadCliQ.
 
-This comparison changes more than one factor at once: token budget (8T to 1T) and prefix-stabilization components (sentinel wrapping and visual positional embeddings). Therefore, the gain is interpreted as a combined token-interface effect rather than a strict interface-only isolation.
+Because Base-1T and Base-8T share the same prefix/interface design and matched training policy, this is interpreted as a direct token-count effect under the current compute budget.
 
-The mask-downsampling transition provides an orthogonal control inside the 8-token branch. MaxPool-8T remains close to Baseline-8T and does not reproduce the gain of Prefix-Stable-1T, which suggests mask downsampling alone is not the primary driver.
+The mask-downsampling transition remains secondary: MaxPool-8T stays below Base-8T on the primary quality signals, so max-pooling alone does not explain the Base-8T gain.
 
 \subsection{RQ2: Architecture Complexity}
-Table~\ref{tab:delta_vs_baseline} summarizes deltas against baseline for representative models. In the maxpool-derived architecture branch, heavier modules such as Perceiver, multiscale, and v3-alignment variants do not consistently outperform MaxPool-8T under the current training budget.
+Table~\ref{tab:delta_vs_baseline} summarizes deltas against baseline for representative models. In the maxpool-derived architecture branch, heavier modules such as Perceiver, multiscale, and CNN+alignment variants do not consistently outperform MaxPool-8T under the current training budget.
 
-Within this branch, Multiscale-FPN is the strongest of the heavier variants, but its gains are modest and not uniform across metric families. Perceiver-Bridge and CNN-Align-v3 remain below MaxPool-8T on the main global signals, which weakens the claim that added architectural complexity is the main driver of quality in this setup.
+Within this branch, Multiscale-8T is the strongest of the heavier variants, but its gains are modest and not uniform across metric families. Perceiver-8T and CNNAlign-8T remain below MaxPool-8T on the main global signals, which weakens the claim that added architectural complexity is the main driver of quality in this setup.
+A direct loss-composition comparison is also available in this branch: MaxPool-8T (pure LM objective) versus Align-8T (LM+alignment). Align-8T remains below MaxPool-8T on GREEN, BLEU-4, RadGraph, and RadCliQ, so alignment regularization alone does not improve report quality under the current setup.
 
 The practical interpretation is that complexity helps only in narrow cases under the current budget and does not establish a robust global advantage. Under one-epoch training with the current optimization constraints, interface quality remains more reliable than heavier visual modules.
 
 \begin{table}[htbp]
     \centering
-    \caption{Delta against Baseline-8T. Positive values are better.}
+    \caption{Delta against Base-1T. Positive values are better.}
     \label{tab:delta_vs_baseline}
     \begin{tabular}{lcccc}
         \toprule
         \textbf{Model} & $\Delta$GREEN & $\Delta$BLEU-4 & $\Delta$RadGraph & $\Delta$RadCliQ \\\midrule
-        Prefix-Stable-1T & +2.49 & +1.31 & +2.50 & +6.68 \\
-        Multiscale-FPN & +0.45 & -0.65 & -0.15 & -1.56 \\
-        Perceiver-Bridge & -0.70 & -0.99 & -0.68 & -2.98 \\
-        CNN-Align-v3 & -0.97 & -0.98 & -0.09 & -3.02 \\
-        Hard-Mining & -0.71 & -0.88 & -0.64 & -3.86 \\
-        Curriculum-2Phase & -12.86 & -6.02 & -11.00 & -26.47 \\
+        Base-8T & +1.21 & +0.49 & +0.75 & +3.87 \\
+        MaxPool-8T & +0.39 & +0.27 & +0.21 & +1.79 \\
+        Multiscale-8T & +1.10 & +0.28 & +0.31 & +1.99 \\
+        Perceiver-8T & -0.05 & -0.06 & -0.22 & +0.57 \\
+        Align-8T & -0.30 & +0.03 & -0.06 & +0.51 \\
+        CNNAlign-8T & -0.32 & -0.05 & +0.37 & +0.53 \\
+        HardMining-8T & -0.06 & +0.05 & -0.18 & -0.32 \\
+        WeightedLoss-1T & -1.81 & -2.05 & -2.46 & -4.99 \\
+        Curriculum-8T & -12.22 & -5.09 & -10.54 & -22.93 \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-For strict within-branch interpretation, maxpool-derived variants should be compared against MaxPool-8T in Table~\ref{tab:medgemma_ablation_full}, while single-token area-derived policy variants should be compared against Prefix-Stable-1T.
+For strict within-branch interpretation, maxpool-derived variants should be compared against MaxPool-8T in Table~\ref{tab:medgemma_ablation_full}, while single-token policy variants should be compared against Base-1T and token-count control against Base-8T.
 
 \subsection{RQ3: Training Strategy}
-Training-policy interventions split into two branches. In the single-token area-derived branch, Undersample-DefaultText-1T and Weighted-Organ-Loss-1T do not surpass Prefix-Stable-1T. In the maxpool-derived branch, Hard-Mining and Curriculum-2Phase do not surpass MaxPool-8T, and curriculum learning degrades most global metrics in the current two-phase configuration.
+Training-policy interventions split into two branches. In the single-token area-derived branch, WeightedLoss-1T does not surpass Base-1T. In the maxpool-derived branch, HardMining-8T and Curriculum-8T do not surpass MaxPool-8T, and curriculum learning degrades most global metrics in the current two-phase configuration.
 
-In the single-token area-derived branch, the gap to Prefix-Stable-1T is clear across clinical and lexical-semantic groups. Undersample-DefaultText-1T trails the reference model, and Weighted-Organ-Loss-1T trails further. These results suggest that imbalance-control policies alone do not recover the gain provided by the stronger single-token prefix configuration.
+In the single-token area-derived branch, WeightedLoss-1T remains below Base-1T across clinical and lexical-semantic groups. This suggests that loss-side imbalance control alone does not recover baseline quality in the single-token branch.
 
-In the maxpool-derived branch, Hard-Mining stays closer to MaxPool-8T but still remains below it on the primary quality signals. Curriculum-2Phase shows the largest overall regression in this branch. This likely reflects instability or underfitting under the current schedule rather than a generally negative verdict on curriculum ideas.
+In the maxpool-derived branch, HardMining-8T stays closer to MaxPool-8T but still remains below it on the primary quality signals. Curriculum-8T shows the largest overall regression in this branch. This likely reflects instability or underfitting under the current schedule rather than a generally negative verdict on curriculum ideas.
 
 \subsection{Text Policy Check: Default vs Synonym Templates}
-Table~\ref{tab:text_policy_synonyms} compares the v3-resized branch under different default empty-organ phrasing policies. The comparison is a strict one-factor pair: v3-Resized-DefaultText vs v3-Resized-SynonymText.
+Table~\ref{tab:text_policy_synonyms} compares the resized alignment branch under different default empty-organ phrasing policies. The comparison is a strict one-factor pair: DefaultText vs SynonymText.
 
 \begin{table}[htbp]
     \centering
-    \caption{Text-policy comparison in the v3-resized branch.}
+    \caption{Text-policy comparison in the resized alignment branch.}
     \label{tab:text_policy_synonyms}
     \begin{tabular}{lccccc}
         \toprule
         \textbf{Model} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{ROUGE-L} & \textbf{RadGraph} & \textbf{RadCliQ} \\\midrule
-        v3-Resized-DefaultText & 28.9 & 4.9 & 27.4 & 20.0 & 88.9 \\
-        v3-Resized-SynonymText & \textbf{33.6} & \textbf{8.2} & 33.2 & \textbf{25.0} & 105.7 \\
+        DefaultText & 28.9 & 4.9 & 27.4 & 20.0 & 88.9 \\
+        SynonymText & \textbf{33.6} & \textbf{8.2} & 33.2 & \textbf{25.0} & 105.7 \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 In this branch, synonym-based default phrasing is associated with better global quality than the default-template baseline. The improvement appears consistently across both clinical and lexical dimensions, indicating that text policy alone can shift measured report quality when architecture and training loop are held fixed.
-Code inspection indicates the v3-resized default and synonym branches share the same core architecture and training loop, so this is interpreted as a strict text-policy comparison rather than a model-family change.
+Code inspection indicates the resized alignment default and synonym branches share the same core architecture and training loop, so this is interpreted as a strict text-policy comparison rather than a model-family change.
 
 \subsection{RQ4: Decoder Family Comparison}
-Decoder comparison is a core axis with fixed protocol and table schema. Table~\ref{tab:decoder_comparison} now includes finalized MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART rows from the same standardized metric pass.
+Decoder comparison is a core axis with fixed protocol and table schema. Table~\ref{tab:decoder_comparison} now includes MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART rows from the same standardized metric pass.
 
-The current evidence shows a mixed but interpretable pattern. BERT-base provides the strongest overall GREEN and broad lexical-semantic quality signals under the shared protocol. MedGemma remains stronger on the relational-clinical structure axis represented by RadGraph. GPT-2 remains stronger than BioBART on most global dimensions, while BioBART is the weakest overall among the four completed decoders.
+The current evidence shows a mixed but interpretable pattern. BERT-base provides the strongest overall GREEN and broad lexical-semantic quality signals under the shared protocol and also leads RadGraph in this decoder set. MedGemma (Base-8T) remains competitive but trails BERT-base on aggregate metrics while showing much lower template reuse. GPT-2 remains stronger than BioBART on most global dimensions, while BioBART is the weakest overall among the four completed decoders.
 
-Because decoder prompting policies differ across families, organ-header completion is not used for cross-decoder ranking. Table~\ref{tab:decoder_sanity} reports only neutral run diagnostics such as sample count and average output length.
+Table~\ref{tab:decoder_sanity} reports neutral run diagnostics such as sample count and average output length.
 
-Table~\ref{tab:decoder_diversity} adds diversity diagnostics over normalized full reports. BERT-base shows the strongest repetition profile among the four decoders: only $41.3\%$ unique reports, $19.0\%$ coverage by the top five templates, and $48.2\%$ coverage by the top fifty templates. MedGemma shows much lower template reuse, with $82.0\%$ unique reports and $16.6\%$ top-fifty coverage.
+Table~\ref{tab:decoder_diversity} adds diversity diagnostics over normalized full reports. BERT-base shows the strongest repetition profile among the four decoders: only $41.3\%$ unique reports, $19.0\%$ coverage by the top five templates, and $48.2\%$ coverage by the top fifty templates. MedGemma (Base-8T) shows much lower template reuse, with $100.0\%$ unique reports and only $3.2\%$ top-fifty coverage. Here, uniqueness is exact-match uniqueness on normalized full reports, so it quantifies template reuse after normalization rather than semantic similarity.
 
 \begin{table}[htbp]
     \centering
@@ -248,10 +253,10 @@ Table~\ref{tab:decoder_diversity} adds diversity diagnostics over normalized ful
     \begin{tabular}{lcccccccccc}
         \toprule
         \textbf{Decoder} & \textbf{GREEN} & \textbf{BLEU-4} & \textbf{METEOR} & \textbf{ROUGE-L} & \textbf{CIDEr} & \textbf{BERTScore} & \textbf{RadGraph} & \textbf{CheXbert} & \textbf{RadCliQ} & \textbf{SRR-BERT} \\\midrule
-        MedGemma (best variant) & 34.8 & 10.5 & 34.4 & 37.9 & 8.4 & 59.6 & 26.8 & 2.6 & 110.4 & 32.4 \\
+        MedGemma (Base-8T) & 32.8 & 8.8 & 32.5 & 34.4 & 4.1 & 56.9 & 24.6 & 22.7 & 104.1 & 32.7 \\
         BERT-base (fVLM-aligned baseline) & 38.2 & 11.9 & 37.1 & 40.3 & 6.2 & 62.0 & 25.2 & 27.5 & 109.2 & 35.3 \\
-        GPT-2 official v3 run & 29.1 & 15.9 & 37.1 & 36.4 & 8.0 & 59.9 & 22.4 & 38.2 & 103.8 & 38.5 \\
-        BioBART official v3 run & 28.8 & 10.0 & 32.2 & 36.5 & 4.1 & 59.0 & 21.9 & 28.0 & 96.8 & 33.5 \\
+        GPT-2 & 29.1 & 15.9 & 37.1 & 36.4 & 8.0 & 59.9 & 22.4 & 38.2 & 103.8 & 38.5 \\
+        BioBART & 28.8 & 10.0 & 32.2 & 36.5 & 4.1 & 59.0 & 21.9 & 28.0 & 96.8 & 33.5 \\
         \bottomrule
     \end{tabular}
     }
@@ -266,10 +271,10 @@ Table~\ref{tab:decoder_sanity} provides lightweight run diagnostics that complem
     \begin{tabular}{lcc}
         \toprule
         \textbf{Decoder} & \textbf{Samples} & \textbf{Avg words/report} \\\midrule
-        MedGemma best & 1564 & 157.9 \\
-        BERT-base v3 & 1563 & 80.4 \\
-        GPT-2 v3 & 1563 & 98.7 \\
-        BioBART v3 & 1563 & 66.0 \\
+        MedGemma (Base-8T) & 1563 & 113.0 \\
+        BERT-base (fVLM-aligned baseline) & 1563 & 80.4 \\
+        GPT-2 & 1563 & 98.7 \\
+        BioBART & 1563 & 66.0 \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -282,33 +287,52 @@ Table~\ref{tab:decoder_sanity} provides lightweight run diagnostics that complem
     \begin{tabular}{lccccc}
         \toprule
         \textbf{Decoder} & \textbf{Unique report ratio (\%)} & \textbf{Top-1 template coverage (\%)} & \textbf{Top-5 template coverage (\%)} & \textbf{Top-50 template coverage (\%)} & \textbf{Effective-template ratio (\%)} \\\midrule
-        MedGemma (best variant) & 82.0 & 1.3 & 4.8 & 16.6 & 68.9 \\
+        MedGemma (Base-8T) & 100.0 & 0.1 & 0.3 & 3.2 & 100.0 \\
         BERT-base (fVLM-aligned baseline) & 41.3 & 4.7 & 19.0 & 48.2 & 17.8 \\
-        GPT-2 official v3 run & 60.7 & 4.0 & 13.2 & 32.5 & 35.4 \\
-        BioBART official v3 run & 78.7 & 1.2 & 4.3 & 17.4 & 65.8 \\
+        GPT-2 & 60.7 & 4.0 & 13.2 & 32.5 & 35.4 \\
+        BioBART & 78.7 & 1.2 & 4.3 & 17.4 & 65.8 \\
         \bottomrule
     \end{tabular}
     }
 \end{table}
 
-\section{Fine-Grained Analyses}\label{sec:exp_fine_grained}
-\subsection{Organ-Level Analysis}
-Table~\ref{tab:best_model_organs} reports selected organ-level metrics for the best MedGemma variant.
+To make the repetition profile concrete, Table~\ref{tab:decoder_repetition_example} shows one same-patient organ excerpt together with the ground-truth reference and how often each generated excerpt is reused in the corresponding decoder output set. Excerpts are shown verbatim (not copy-edited), so clipped or unidiomatic phrasing reflects model output behavior rather than transcription errors.
 
 \begin{table}[htbp]
     \centering
-    \caption{Best MedGemma variant: selected organ-level metrics.}
+    \small
+    \caption{Same-patient repetition example (patient \texttt{valid\_128\_a\_1}, organ \texttt{AORTA}). Excerpts are verbatim spans from generated and reference reports. Reuse is computed over reports where an AORTA block is present.}
+    \label{tab:decoder_repetition_example}
+    \begin{tabular}{p{3.2cm}p{8.7cm}p{2.5cm}}
+        \toprule
+        \textbf{Entry} & \textbf{AORTA excerpt} & \textbf{Exact reuse} \\\midrule
+        Ground truth (reference) & The ascending aorta calibration is 41 mm. It is wider than normal. The descending aorta is slightly prominent. The aortic arch is 32 mm. It is wider than normal. Calcific atheroma plaques are observed in the aortic arch, ascending aorta, and coronary arteries. Calcific atheroma plaques are observed in the abdominal aorta. & -- \\
+        MedGemma (Base-8T) & Calcified atherosclerotic plaques are observed in the aortic arch, descending aorta and coronary arteries. Atherosclerosis & 1/1564 (0.1\%) \\
+        BERT-base (fVLM-aligned baseline) & calibrations of mediastinal major vascular structures are natural. & 550/867 (63.4\%) \\
+        GPT-2 & calibrations of mediastinal major vascular structures are natural. & 475/867 (54.8\%) \\
+        BioBART & thickenings are observed in the aortic arch and coronary arteries. & 243/867 (28.0\%) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Fine-Grained Analyses}\label{sec:exp_fine_grained}
+\subsection{Organ-Level Analysis}
+Table~\ref{tab:best_model_organs} reports selected organ-level metrics for Base-8T (best MedGemma variant).
+
+\begin{table}[htbp]
+    \centering
+    \caption{Base-8T (best MedGemma variant): selected organ-level metrics.}
     \label{tab:best_model_organs}
     \begin{tabular}{lcccc}
         \toprule
         \textbf{Organ} & \textbf{N} & \textbf{GREEN} & \textbf{RadGraph} & \textbf{CheXbert} \\\midrule
-        LUNG & 1562 & 16.9 & 7.4 & 6.0 \\
-        HEART & 1446 & 62.6 & 50.2 & 0.0 \\
-        ESOPHAGUS & 1353 & 65.1 & 42.6 & 83.1 \\
-        TRACHEA & 1411 & 81.7 & 31.8 & 95.7 \\
-        AORTA & 867 & 35.1 & 12.5 & 63.6 \\
-        LIVER & 850 & 56.1 & 59.3 & 69.0 \\
-        KIDNEY & 280 & 13.4 & 22.0 & 40.3 \\
+        LUNG & 1562 & 13.9 & 8.8 & 22.8 \\
+        HEART & 1446 & 48.3 & 38.4 & 27.8 \\
+        ESOPHAGUS & 1353 & 63.1 & 37.8 & 78.3 \\
+        TRACHEA & 1411 & 69.2 & 49.1 & 95.2 \\
+        AORTA & 867 & 28.5 & 15.0 & 62.7 \\
+        LIVER & 850 & 24.6 & 35.3 & 71.1 \\
+        KIDNEY & 280 & 3.3 & 12.7 & 20.5 \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -316,91 +340,36 @@ Table~\ref{tab:best_model_organs} reports selected organ-level metrics for the b
 Thoracic organs with strong support tend to show higher stability than low-support abdominal organs.
 
 \subsection{Cross-Attention Activation Case Studies}
-Cross-attention overlays are extracted with a dedicated visualization script and used to assess localization quality, robustness under multi-region findings, and behavior differences across model variants.
+Cross-attention overlays are extracted with a dedicated visualization script and used to assess localization quality across model variants. In the main text, we use head-averaged maps (mean across heads and across the eight query tokens assigned to each organ), which are less visually dramatic but better reflect aggregate attention mass.
 
-\subsubsection{Case Study A: Typical Thoracic Pattern}
 \begin{figure}[htbp]
     \centering
-    \begin{minipage}{0.48\textwidth}
+    \begin{minipage}{0.98\textwidth}
         \centering
-        \IfFileExists{figures/attention/caseA_baseline.png}{
-            \includegraphics[width=\linewidth]{figures/attention/caseA_baseline.png}
+        \IfFileExists{figures/attention_mean_lung_valid_730_a.png}{
+            \includegraphics[width=\linewidth]{figures/attention_mean_lung_valid_730_a.png}
         }{
-            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Placeholder\\Case A baseline attention map\\Baseline-8T}}
+            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Missing figure\\attention\_mean\_lung\_valid\_730\_a}}
         }
-        \caption*{(a) Baseline model}
-    \end{minipage}\hfill
-    \begin{minipage}{0.48\textwidth}
-        \centering
-        \IfFileExists{figures/attention/caseA_best.png}{
-            \includegraphics[width=\linewidth]{figures/attention/caseA_best.png}
-        }{
-            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Placeholder\\Case A best-model attention map\\Prefix-Stable-1T}}
-        }
-        \caption*{(b) Best MedGemma variant}
+        \caption*{(a) Lung query (patient \texttt{valid\_730\_a})}
     \end{minipage}
-    \caption{Case Study A: baseline vs best model cross-attention overlays in a thoracic-dominant exam.}
-    \label{fig:caseA_attention}
+
+    \vspace{0.8em}
+
+    \begin{minipage}{0.98\textwidth}
+        \centering
+        \IfFileExists{figures/attention_mean_kidney_valid_730_a.png}{
+            \includegraphics[width=\linewidth]{figures/attention_mean_kidney_valid_730_a.png}
+        }{
+            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Missing figure\\attention\_mean\_kidney\_valid\_730\_a}}
+        }
+        \caption*{(b) Kidney query (patient \texttt{valid\_730\_a})}
+    \end{minipage}
+    \caption{Representative head-averaged cross-attention overlays for lung and kidney. Each panel compares Base-8T, Multiscale-ViT-FPN, and CNN-stem+alignment under the same visualization pipeline.}
+    \label{fig:attention_mean_valid730}
 \end{figure}
 
-\subsubsection{Case Study B: Mixed Thoracic and Upper-Abdominal Findings}
-\begin{figure}[htbp]
-    \centering
-    \begin{minipage}{0.48\textwidth}
-        \centering
-        \IfFileExists{figures/attention/caseB_baseline.png}{
-            \includegraphics[width=\linewidth]{figures/attention/caseB_baseline.png}
-        }{
-            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Placeholder\\Case B baseline attention map\\Thorax and upper abdomen visible}}
-        }
-        \caption*{(a) Baseline model}
-    \end{minipage}\hfill
-    \begin{minipage}{0.48\textwidth}
-        \centering
-        \IfFileExists{figures/attention/caseB_best.png}{
-            \includegraphics[width=\linewidth]{figures/attention/caseB_best.png}
-        }{
-            \fbox{\parbox[c][5.2cm][c]{0.94\linewidth}{\centering Placeholder\\Case B best-model attention map\\Thorax and upper abdomen visible}}
-        }
-        \caption*{(b) Best MedGemma variant}
-    \end{minipage}
-    \caption{Case Study B: behavior under mixed thoracic and upper-abdominal findings.}
-    \label{fig:caseB_attention}
-\end{figure}
-
-\subsubsection{Case Study C: Baseline vs Perceiver vs Multiscale}
-\begin{figure}[htbp]
-    \centering
-    \begin{minipage}{0.31\textwidth}
-        \centering
-        \IfFileExists{figures/attention/caseC_baseline.png}{
-            \includegraphics[width=\linewidth]{figures/attention/caseC_baseline.png}
-        }{
-            \fbox{\parbox[c][4.9cm][c]{0.94\linewidth}{\centering Placeholder\\Case C baseline}}
-        }
-        \caption*{(a) Baseline}
-    \end{minipage}\hfill
-    \begin{minipage}{0.31\textwidth}
-        \centering
-        \IfFileExists{figures/attention/caseC_perceiver.png}{
-            \includegraphics[width=\linewidth]{figures/attention/caseC_perceiver.png}
-        }{
-            \fbox{\parbox[c][4.9cm][c]{0.94\linewidth}{\centering Placeholder\\Case C perceiver}}
-        }
-        \caption*{(b) Perceiver}
-    \end{minipage}\hfill
-    \begin{minipage}{0.31\textwidth}
-        \centering
-        \IfFileExists{figures/attention/caseC_multiscale.png}{
-            \includegraphics[width=\linewidth]{figures/attention/caseC_multiscale.png}
-        }{
-            \fbox{\parbox[c][4.9cm][c]{0.94\linewidth}{\centering Placeholder\\Case C multiscale}}
-        }
-        \caption*{(c) Multiscale}
-    \end{minipage}
-    \caption{Case Study C: qualitative comparison of attention behavior across architecture variants.}
-    \label{fig:caseC_attention}
-\end{figure}
+These maps are computed on a coarse token grid and then upsampled, so smooth organ-level support is expected. For this representative case, Base-8T shows stronger in-mask concentration than the two heavier variants in both organs (lung: $49.4\%$ vs $36.5\%$ and $44.8\%$; kidney: $28.5\%$ vs $14.9\%$ and $15.6\%$). We treat this figure as illustrative and consistent with aggregate localization trends, not as standalone proof from a single patient.
 
 \subsection{fVLM-Aligned Baseline on CT-RATE}
 To enable direct comparison under the same protocol, this thesis includes a baseline that uses the fVLM-aligned encoder setup with a BERT-base decoder, following the decoder description in the fVLM paper~\cite{shui2025fvlm}. This baseline is trained and evaluated on CT-RATE with the same preprocessing, report decomposition, and RadEval metric pipeline used for the other models in this chapter.
@@ -408,7 +377,7 @@ To enable direct comparison under the same protocol, this thesis includes a base
 Its quantitative row is now reported in Table~\ref{tab:decoder_comparison}, which enables direct protocol-matched comparison against the MedGemma, GPT-2, and BioBART runs.
 
 \section{Chapter Summary and Minimal Limitations Note}\label{sec:exp_summary}
-The strongest internal model under current protocol is Prefix-Stable-1T. The result pattern is consistent across RQ1 to RQ3: the single-token plus prefix-stabilization bundle is more effective than heavier architectural modules or additional training-policy complexity at the current compute budget.
+The strongest internal model under the current matched protocol is Base-8T. The result pattern across RQ1 to RQ3 indicates that token-count scaling from 1T to 8T improves quality in the stable-prefix branch, while heavier architectural modules and extra training-policy complexity provide limited additional gains.
 
 The decoder axis for RQ4 now has complete standardized rows for all targeted decoder families in this thesis: MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART.
 

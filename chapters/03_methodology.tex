@@ -150,7 +150,7 @@ For MedGemma, the sequence format is:
 Loss is masked over injected visual tokens so gradients are concentrated on target text generation.
 
 \section{Variants Evaluated}\label{sec:method_variants}
-Table~\ref{tab:model_matrix_method} summarizes the major variants with concise display names. The raw run IDs are listed in Appendix~\ref{appendix:model_variant_mapping}. The baseline uses masked organ cross-attention and a direct projector. The strongest MedGemma variant adds visual positional embeddings and explicit visual sentinels. Perceiver and multiscale variants test heavier visual aggregation/fusion. The v3 branch adds a CNN stem and alignment regularization. Curriculum and hard-example branches isolate optimization-policy effects under the same core interface. Decoder-family branches cover MedGemma, BERT-base, GPT-2, and BioBART with the same visual frontend.
+Table~\ref{tab:model_matrix_method} summarizes the major variants with concise display names. The raw run IDs are listed in Appendix~\ref{appendix:model_variant_mapping}. The Base-1T/Base-8T pair shares the same stable-prefix interface (masked organ cross-attention, direct projector, visual positional embeddings, explicit visual sentinels) and is used for strict token-count control. Perceiver and multiscale variants test heavier visual aggregation/fusion. The CNN+alignment branch adds a CNN stem and explicit alignment regularization. Curriculum and hard-example branches isolate optimization-policy effects under the same core interface. Decoder-family branches cover MedGemma, BERT-base, GPT-2, and BioBART with the same visual frontend.
 
 \begin{table}[htbp]
     \centering
@@ -159,17 +159,16 @@ Table~\ref{tab:model_matrix_method} summarizes the major variants with concise d
     \begin{tabular}{p{3.2cm}p{10.8cm}}
         \toprule
         \textbf{Variant} & \textbf{Main Design Choice} \\\midrule
-        Baseline-8T & Baseline MedGemma branch with 8 organ tokens, masked cross-attention, projector, and weighted LM training. \\
-        Prefix-Stable-1T & Single-token (1T) variant with visual positional embeddings and explicit visual sentinel wrapping; strongest global performance in current runs. \\
+        Base-1T & Stable-prefix MedGemma baseline with 1 organ token and explicit visual sentinel wrapping. \\
+        Base-8T & Same stable-prefix baseline as Base-1T with 8 organ tokens. \\
         MaxPool-8T & Keeps the baseline design but changes mask downsampling to max pooling before token-grid attention. \\
-        Perceiver-Bridge & Replaces single cross-attention with stacked Perceiver-style self/cross-attention blocks. \\
-        Multiscale-FPN & Fuses intermediate ViT features from multiple depths before organ-query attention. \\
-        CNN-Align-v3 & Adds CNN stem and visual-text alignment loss; explores stronger encoder bias and contrastive regularization. \\
-        Align-v1 & Adds alignment regularization without the full v3 architectural stack. \\
-        Curriculum-2Phase & Two-phase pathology-first curriculum before full-distribution training. \\
-        Hard-Mining & Dynamic weighted sampler emphasizing high-loss samples. \\
-        Undersample-DefaultText-1T & Single-token prefix-stable branch with reduced exposure to default empty-organ text via organ-specific keep probabilities. \\
-        Weighted-Organ-Loss-1T & Single-token prefix-stable branch with reweighted loss contributions for explicit versus default organ statements. \\
+        Perceiver-8T & Replaces single cross-attention with stacked Perceiver-style self/cross-attention blocks. \\
+        Multiscale-8T & Fuses intermediate ViT features from multiple depths before organ-query attention. \\
+        CNNAlign-8T & Adds CNN stem and visual-text alignment loss; explores stronger encoder bias and contrastive regularization. \\
+        Align-8T & Adds alignment regularization without the full CNN+alignment stack. \\
+        Curriculum-8T & Two-phase pathology-first curriculum before full-distribution training. \\
+        HardMining-8T & Dynamic weighted sampler emphasizing high-loss samples. \\
+        WeightedLoss-1T & Single-token prefix-stable branch with reweighted loss contributions for explicit versus default organ statements. \\
         BERT-base / GPT-2 / BioBART branches & Same organ-attention encoder interface with decoder-family adaptation for cross-family comparison. \\
         \bottomrule
     \end{tabular}
@@ -178,12 +177,12 @@ Table~\ref{tab:model_matrix_method} summarizes the major variants with concise d
 \subsection{Controlled Comparison Groups}
 To keep interpretation focused, we organize results by groups where one factor is changed at a time.
 \begin{itemize}
-    \item Interface bundle group (area mask downsampling): Baseline-8T and Prefix-Stable-1T compare token-count and visual-prefix design changes under the same area-based mask-to-token mapping.
-    \item Mask-downsampling transition: Baseline-8T and MaxPool-8T isolate the effect of switching mask downsampling from area interpolation to max pooling.
-    \item Architecture group (maxpool lineage): MaxPool-8T, Perceiver-Bridge, Multiscale-FPN, Align-v1, and CNN-Align-v3 isolate visual-backbone and bridge choices under a shared maxpool-based interface.
-    \item Training-policy group (single-token area lineage): Prefix-Stable-1T, Undersample-DefaultText-1T, and Weighted-Organ-Loss-1T isolate optimization and imbalance-control choices under the same single-token prefix architecture.
-    \item Training-policy group (maxpool lineage): MaxPool-8T, Hard-Mining, and Curriculum-2Phase isolate optimization-policy effects in the maxpool-based branch.
-    \item No-findings text-policy group: v3-Resized-DefaultText and v3-Resized-SynonymText share the same v3-resized backbone and differ only in default empty-organ phrasing.
+    \item Token-count control group (stable-prefix lineage): Base-1T and Base-8T isolate token-count effects with matched prefix/interface and training settings.
+    \item Mask-downsampling transition: Base-8T and MaxPool-8T isolate the effect of switching mask downsampling from area interpolation to max pooling.
+    \item Architecture group (maxpool lineage): MaxPool-8T, Perceiver-8T, Multiscale-8T, Align-8T, and CNNAlign-8T isolate visual-backbone and bridge choices under a shared maxpool-based interface.
+    \item Training-policy group (single-token area lineage): Base-1T and WeightedLoss-1T isolate loss-side imbalance-control choices under the same single-token prefix architecture.
+    \item Training-policy group (maxpool lineage): MaxPool-8T, HardMining-8T, and Curriculum-8T isolate optimization-policy effects in the maxpool-based branch.
+    \item No-findings text-policy group: DefaultText and SynonymText share the same resized alignment backbone and differ only in default empty-organ phrasing.
     \item Decoder-family group: MedGemma, BERT-base, GPT-2, and BioBART use the same organ-attention visual frontend for cross-decoder comparison.
 \end{itemize}
 
@@ -211,7 +210,7 @@ and optimize:
 \begin{equation}
 \mathcal{L} = \mathcal{L}_{\mathrm{LM}} + \lambda \mathcal{L}_{\mathrm{align}}.
 \end{equation}
-This is used mainly in CNN-Align-v3 and Align-v1, and in selected BERT-base/GPT-2/BioBART branches.
+This is used mainly in CNNAlign-8T and Align-8T, and in selected BERT-base/GPT-2/BioBART branches.
 
 \section{Optimization and Inference}\label{sec:method_optimization_inference}
 \subsection{Shared Optimization Settings}
@@ -225,10 +224,10 @@ Across main training runs, settings are largely standardized:
 \end{itemize}
 
 \subsection{Training-Strategy Variants}
-Beyond architecture, the thesis evaluates curriculum learning, hard-example mining, undersampling of dominant default-text targets, and organ-weighted losses.
+Beyond architecture, the active training-policy comparisons evaluate curriculum learning, hard-example mining, and organ-weighted losses.
 
 \subsection{Organ-Wise Inference and Report Assembly}
-At inference, one prompt is generated per organ and decoded with beam search. MedGemma runs typically use 3 beams and \texttt{max\_new\_tokens=100}; BERT-base/GPT-2/BioBART runs typically use 4 beams and \texttt{max\_length=120}. Outputs are assembled in fixed organ order:
+At inference, one prompt is generated per organ and decoded with controlled generation settings. MedGemma runs typically use 3 beams and \texttt{max\_new\_tokens=100}; BERT-base/GPT-2/BioBART runs typically use 4 beams and \texttt{max\_length=120}. For strict within-family ranking, decoding policy is held fixed (beam vs sampling and length limits). Outputs are assembled in fixed organ order:
 \begin{equation}
 \hat{R} = \texttt{LUNG: }\hat{y}_{\mathrm{lung}}\;\Vert\;\cdots\;\Vert\;\texttt{KIDNEY: }\hat{y}_{\mathrm{kidney}}.
 \end{equation}

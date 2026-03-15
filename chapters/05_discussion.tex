@@ -2,23 +2,24 @@
 
 This chapter interprets the evidence from Chapter~\ref{chapter:experiments}. The goal is to explain why the observed ranking emerged, which conclusions are robust, and where claims should be bounded.
 
-\section{Why Interface Design Dominated}
-Empirical signal. Within MedGemma ablations, the strongest model, Prefix-Stable-1T, improves core global metrics such as GREEN, RadGraph, BLEU-4, ROUGE-L, BERTScore, and RadCliQ over Baseline-8T. By contrast, heavier variants show mixed or negative deltas despite higher nominal capacity.
-For this pair, the gain should be read as a bundled token-interface effect because token count (8T vs 1T) and prefix design both change.
+\section{Why Interface and Token Count Dominated}
+Empirical signal. Within MedGemma ablations under the matched protocol, Base-8T is strongest on the primary global metrics and improves GREEN, RadGraph, BLEU-4, ROUGE-L, BERTScore, and RadCliQ over Base-1T. By contrast, heavier variants show mixed or negative deltas despite higher nominal capacity.
+For this pair, the gain can be interpreted as a token-count effect because Base-1T and Base-8T share the same stable-prefix interface and training-policy setup.
 
-Mechanistic interpretation. Three interface components in this bundled setup appear decisive:
+Mechanistic interpretation. A plausible explanation is that stable interface components reduce ambiguity at the visual-text boundary:
 \begin{enumerate}
     \item explicit visual token delimitation (sentinel wrapping),
     \item consistent positional encoding over visual prefix tokens,
     \item stabilized projection into decoder embedding scale.
 \end{enumerate}
-Together they reduce ambiguity between visual context and textual instruction/response tokens. Since token count also changes in the strongest pair, these mechanisms are interpreted as plausible contributors rather than cleanly isolated factors.
+Together they reduce ambiguity between visual context and textual instruction/response tokens. With these controls fixed, the observed Base-1T to Base-8T gain indicates that higher token capacity better preserves organ-level detail under the current budget.
 
 Negative ablations in context. Perceiver-style resampling and multiscale fusion are not intrinsically weak. Under the current low effective batch, long context, and short training budget, their additional complexity likely increases optimization burden more than it improves report-level factuality.
+Within the same maxpool lineage, adding alignment regularization alone (Align-8T) also does not outperform the pure-LM reference (MaxPool-8T), which is consistent with the RQ2 interpretation.
 
-Curriculum and hard-example strategies also underperform the best interface variant. This indicates that weighting/sampling can refine learning but cannot fully compensate for an unstable vision-language interface.
+Curriculum and hard-example strategies also underperform the best stable-prefix baseline. This indicates that weighting/sampling can refine learning but does not substitute for strong token-interface capacity.
 
-Case-study support. Cross-attention overlays provide spatial evidence consistent with metric trends. When a model exhibits diffuse or anatomically implausible attention despite larger capacity, degraded factual metrics are easier to explain. This is why case studies are treated as supporting evidence for mechanism, not only as qualitative illustration.
+Case-study support. The head-averaged overlays in Figure~\ref{fig:attention_mean_valid730} provide spatial evidence consistent with metric trends. In this representative patient, Base-8T shows higher in-mask concentration than Multiscale and CNN-alignment variants for both lung (49.4\% vs 36.5\% and 44.8\%) and kidney (28.5\% vs 14.9\% and 15.6\%). The larger separation in kidney also fits the long-tail difficulty of sparse organs. These qualitative maps are used as supporting evidence, not as standalone proof.
 
 Design implication. For this task family, the practical order is to stabilize the visual-language interface first, verify organ grounding, and then scale architectural complexity.
 
@@ -30,9 +31,9 @@ Different metric families reward different behavior, so disagreement is expected
     \item clinical metrics reward factual and relational correctness.
 \end{itemize}
 
-The decoder results illustrate this directly. BERT-base is strongest on GREEN and broad lexical-semantic quality, while MedGemma is strongest on RadGraph. GPT-2 remains stronger than BioBART on most global dimensions. CheXbert remains useful but is not treated as the sole clinical proxy for organ-decomposed CT text. Consistent with Section~\ref{sec:evaluation_metrics}, model ranking prioritizes GREEN and RadGraph, then checks lexical-semantic coherence.
+The decoder results illustrate this directly. BERT-base is strongest on GREEN, broad lexical-semantic quality, and RadGraph in the completed decoder table. GPT-2 remains stronger than BioBART on most global dimensions. CheXbert remains useful but is not treated as the sole clinical proxy for organ-decomposed CT text. Consistent with Section~\ref{sec:evaluation_metrics}, model ranking prioritizes GREEN and RadGraph, then checks lexical-semantic coherence.
 
-Diversity diagnostics add an important correction to aggregate metric ranking. In Table~\ref{tab:decoder_diversity}, BERT-base has high template reuse, with almost half of reports covered by its top fifty normalized templates. MedGemma shows substantially lower reuse. This explains why BERT can score well on global overlap-style metrics while still producing less case-specific report content.
+Diversity diagnostics add an important correction to aggregate metric ranking. In Table~\ref{tab:decoder_diversity}, BERT-base has high template reuse, with almost half of reports covered by its top fifty normalized templates. MedGemma (Base-8T) shows substantially lower reuse, with near-complete report uniqueness under normalized matching. This explains why BERT can score well on global overlap-style metrics while still producing less case-specific report content.
 
 \section{Generalization and Organ Coverage}
 The chest-CT setting yields strong thoracic support and sparse support for several upper-abdominal organs. This long-tail distribution affects both training dynamics and evaluation variance:
@@ -42,18 +43,20 @@ The chest-CT setting yields strong thoracic support and sparse support for sever
     \item template bias risk increases for low-support organs.
 \end{itemize}
 Accordingly, organ-level conclusions are most reliable for high-support organs and should be interpreted cautiously for very sparse ones.
+The lung/kidney attention comparison is consistent with this pattern: differences are visible in both organs, but sparse-organ behavior is more sensitive and should be validated over more than one case.
 
 \section{Decoder Family Axis}
-The decoder-comparison protocol is structurally fixed with a shared frontend, shared metric pipeline, and shared artifact policy. All target rows are now complete under this protocol: MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART. The current evidence favors BERT-base on overall global quality, MedGemma on relational-clinical structure by RadGraph, and GPT-2 over BioBART among the remaining decoder alternatives.
+The decoder-comparison protocol is structurally fixed with a shared frontend, shared metric pipeline, and shared artifact policy. All target rows are now complete under this protocol: MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART. The current evidence favors BERT-base on overall global quality and relational-clinical structure by RadGraph, and GPT-2 over BioBART among the remaining decoder alternatives.
 
-For practical deployment under organ-aware reporting objectives, MedGemma is the safer default in this thesis context because it combines stronger RadGraph performance with lower template repetition.
+For practical deployment under organ-aware reporting objectives, model choice depends on priority: BERT-base is stronger on aggregate metric ranking, while MedGemma is safer when lower template repetition and higher case-specific variation are prioritized.
+In short, aggregate metrics favor BERT-base, diversity/repetition diagnostics favor MedGemma, and the preferred decoder should be selected by deployment objective rather than a single universal ``best'' label.
 
 \section{Relation to Prior Paradigms}
 Compared with many 2D report-generation settings, 3D CT introduces higher token pressure and stronger grounding demands. The results suggest that decoder scaling or heavier visual modules alone are insufficient if token semantics at the interface are not explicit and stable. This aligns with anatomy-guided trends in recent segmentation-aware and decomposition-aware literature.
 
 \section{Validity and Limits}
 Internal validity is strongest for MedGemma-family comparisons because data interfaces and evaluation pipelines are controlled. Decoder-family conclusions are now grounded by completed MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART rows under one protocol.
-For RQ1 specifically, strict causal attribution to interface stabilization alone is limited because the top comparison jointly changes token budget and prefix structure.
+For RQ1 specifically, causal attribution to token count is stronger than in earlier drafts because Base-1T and Base-8T now share matched stable-prefix structure; remaining uncertainty mainly comes from single-run variance.
 
 Findings are specific to organ-decomposed chest-CT reporting and should not be over-generalized to other modalities or report styles without controlled replication.
 

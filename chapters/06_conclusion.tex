@@ -5,7 +5,7 @@ This thesis studied organ-aware radiology report generation from 3D chest CT wit
 
 The implemented framework combined organ-level supervision via report decomposition, organ-conditioned visual token extraction, and decoder adaptation under a consistent evaluation protocol. The evidence now includes systematic MedGemma ablations and completed decoder-family rows for MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART under the same evaluation pass.
 
-The main empirical conclusion is concise: in this setting, the combined choice of token budget and stable visual-language interfacing is more decisive than increasing architectural complexity. Within MedGemma ablations, the strongest model variant used a single-token visual interface with explicit visual-prefix structuring and delivered the most consistent improvements on the primary global metrics used in this thesis. Cross-decoder analysis also shows that stronger aggregate lexical-semantic metrics can coexist with higher template reuse, so deployment-oriented interpretation must include diversity and structure diagnostics in addition to metric averages.
+The main empirical conclusion is concise: in this setting, token budget under a stable visual-language interface is more decisive than adding architectural complexity. Within MedGemma ablations under matched decoding/training conditions, the strongest variant is the stable-prefix 8-token model (Base-8T), which outperforms the matched 1-token baseline on the primary global metrics used in this thesis. The new head-averaged attention case studies (lung and kidney) are consistent with this ranking and show stronger in-mask concentration for Base-8T than heavier variants in the same representative patient. Cross-decoder analysis also shows that stronger aggregate lexical-semantic metrics can coexist with higher template reuse, so deployment-oriented interpretation must include diversity and structure diagnostics in addition to metric averages.
 
 Overall, the thesis contributes:
 \begin{itemize}
@@ -22,7 +22,7 @@ The thesis can be reduced to four practical takeaways:
 \begin{enumerate}
     \item Organ-aware decomposition is not only a data-format choice; it is a training signal that makes failure analysis and controllable generation feasible.
     \item In 3D CT report generation, token budget and interface design can matter more than adding architectural complexity.
-    \item Multi-metric evaluation is mandatory; single-metric optimization is too fragile for clinical text generation claims.
+    \item Multi-metric evaluation is mandatory; single-metric optimization is too fragile for clinical text generation claims, especially when diversity/repetition behavior differs by decoder.
     \item Reproducible artifact discipline (\texttt{generated\_reports*.csv} + \texttt{metrics\_final.csv}) is essential for trustworthy model comparison.
 \end{enumerate}
 
@@ -34,18 +34,18 @@ Future work is prioritized in three tracks.
 \subsection{Track 1: Strengthen the Current Thesis Axis}
 \begin{enumerate}
     \item Add multi-seed stability checks for the decoder-family table under the same standardized metric pass.
-    \item Insert finalized cross-attention case-study figures to complete the quantitative + qualitative evidence pair.
+    \item Scale cross-attention analysis from illustrative cases to cohort-level statistics (in-mask ratio, off-target mass, and entropy) across both common and sparse organs.
     \item Add compact significance reporting (e.g., bootstrap confidence intervals) for key global metrics.
 \end{enumerate}
 This track is short-horizon and can be completed without redesigning the model stack. Its purpose is to close the evidence loop of the current thesis version.
 
 \subsection{Track 2: Improve Model Robustness and Efficiency}
 \begin{enumerate}
-    \item Run controlled token-budget sweeps (1/2/4/8 tokens per organ) under matched compute.
+    \item Extend token-budget control from 1 vs 8 to finer sweeps (2/4/8 tokens per organ) under matched compute.
     \item Compare mask downsampling strategies (area interpolation vs max-pooling) for mask-to-token alignment.
     \item Ablate bridge stabilization choices (with/without variance matching and visual positional embeddings).
-    \item Compare loss composition (pure LM vs LM+alignment) on branches where alignment is implemented.
     \item Compare sampling policies (uniform vs organ-weighted vs hard-example weighted).
+    \item Analyze less-aggregated attention views (single-head/single-query) to test token specialization before averaging.
     \item Explore organ-adaptive token allocation and uncertainty-aware handling for sparse organs.
 \end{enumerate}
 This track targets the main technical bottlenecks identified by the ablations: token efficiency, interface stability, and long-tail organ robustness.
