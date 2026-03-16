@@ -31,11 +31,11 @@ Figure~\ref{fig:organ_decomposition_pipeline} illustrates this pipeline from fre
     \label{fig:organ_decomposition_pipeline}
 \end{figure}
 
-The same interface is used across four decoder families: MedGemma~\cite{yang2024medgemma}, BERT-base~\cite{devlin2019bert}, GPT-2~\cite{radford2019language}, and BioBART~\cite{yuan2022biobart}.
+The same interface is used across four decoder families: MedGemma~\cite{yang2024medgemma}, \ac{BERTbase}~\cite{devlin2019bert}, \ac{GPTtwo}~\cite{radford2019language}, and BioBART~\cite{yuan2022biobart}.
 
 \section{Data and Targets}\label{sec:method_data_targets}
 \subsection{Volume and Mask Preprocessing}
-The training and evaluation code uses a consistent MONAI-based transform stack. Given raw NIfTI CT and segmentation volumes, preprocessing applies:
+The training and evaluation code uses a consistent \ac{MONAI}-based transform stack. Given raw \ac{NIfTI} CT and segmentation volumes, preprocessing applies:
 \begin{enumerate}
     \item channel standardization and axis transposition,
     \item HU clipping ($[-1150, 350]$) and min-max normalization to $[0,1]$,
@@ -80,7 +80,7 @@ Mask extraction follows fixed segmentation-ID mappings summarized in Table~\ref{
 \end{table}
 
 \subsection{Report Decomposition Targets}
-Reference reports are decomposed into organ-keyed JSON records using an instruction-following LLM pipeline based on Llama-3.3-70B-Instruct. Inference is served through vLLM~\cite{kwon2023efficient} with AWQ quantization~\cite{lin2023awq}. The decomposition enforces:
+Reference reports are decomposed into organ-keyed JSON records using an instruction-following LLM pipeline based on Llama-3.3-70B-Instruct. Inference is served through vLLM~\cite{kwon2023efficient} with \ac{AWQ} quantization~\cite{lin2023awq}. The decomposition enforces:
 \begin{enumerate}
     \item schema-constrained JSON output,
     \item one text field per organ key,
@@ -89,10 +89,10 @@ Reference reports are decomposed into organ-keyed JSON records using an instruct
 
 This converts free-text supervision into organ-conditioned targets and enables organ-level error analysis.
 
-During training, each organ is paired with an organ-specific prompt. MedGemma branches use chat-format prompts, while BERT-base/GPT-2/BioBART branches use shorter textual prompts such as \texttt{Describe [organ]:}. In all branches, loss is masked to the response region only.
+During training, each organ is paired with an organ-specific prompt. MedGemma branches use chat-format prompts, while \ac{BERTbase}/\ac{GPTtwo}/BioBART branches use shorter textual prompts such as \texttt{Describe [organ]:}. In all branches, loss is masked to the response region only.
 
 \subsection{Organ Visibility and Report Presence Distribution}
-Although CT-RATE is a chest CT dataset, upper-abdominal organs appear in a non-trivial subset of studies. To make this explicit, we report organ visibility across the dataset and organ-level report presence after decomposition.
+Although \ac{CTRATE} is a chest CT dataset, upper-abdominal organs appear in a non-trivial subset of studies. To make this explicit, we report organ visibility across the dataset and organ-level report presence after decomposition.
 
 For each organ, studies in the training split are partitioned into four alignment cases: visible and reported, visible but unreported, reported without visible support, and neither. This joint view separates visual sparsity from text-label sparsity and directly motivates the empty-organ handling and imbalance-control strategies used later in training.
 
@@ -150,7 +150,7 @@ For MedGemma, the sequence format is:
 Loss is masked over injected visual tokens so gradients are concentrated on target text generation.
 
 \section{Variants Evaluated}\label{sec:method_variants}
-Table~\ref{tab:model_matrix_method} summarizes the major variants with concise display names. The raw run IDs are listed in Appendix~\ref{appendix:model_variant_mapping}. The Base-1T/Base-8T pair shares the same stable-prefix interface (masked organ cross-attention, direct projector, visual positional embeddings, explicit visual sentinels) and is used for strict token-count control. Perceiver and multiscale variants test heavier visual aggregation/fusion. The CNN+alignment branch adds a CNN stem and explicit alignment regularization. Curriculum and hard-example branches isolate optimization-policy effects under the same core interface. Decoder-family branches cover MedGemma, BERT-base, GPT-2, and BioBART with the same visual frontend.
+Table~\ref{tab:model_matrix_method} summarizes the major variants with concise display names. The raw run IDs are listed in Appendix~\ref{appendix:model_variant_mapping}. The Base-1T/Base-8T pair shares the same stable-prefix interface (masked organ cross-attention, direct projector, visual positional embeddings, explicit visual sentinels) and is used for strict token-count control. Perceiver and multiscale variants test heavier visual aggregation/fusion. The CNN+alignment branch adds a CNN stem and explicit alignment regularization. Curriculum and hard-example branches isolate optimization-policy effects under the same core interface. Decoder-family branches cover MedGemma, \ac{BERTbase}, \ac{GPTtwo}, and BioBART with the same visual frontend.
 
 \begin{table}[htbp]
     \centering
@@ -169,7 +169,7 @@ Table~\ref{tab:model_matrix_method} summarizes the major variants with concise d
         Curriculum-8T & Two-phase pathology-first curriculum before full-distribution training. \\
         HardMining-8T & Dynamic weighted sampler emphasizing high-loss samples. \\
         WeightedLoss-1T & Single-token prefix-stable branch with reweighted loss contributions for explicit versus default organ statements. \\
-        BERT-base / GPT-2 / BioBART branches & Same organ-attention encoder interface with decoder-family adaptation for cross-family comparison. \\
+        \ac{BERTbase} / \ac{GPTtwo} / BioBART branches & Same organ-attention encoder interface with decoder-family adaptation for cross-family comparison. \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -183,7 +183,7 @@ To keep interpretation focused, we organize results by groups where one factor i
     \item Training-policy group (single-token area lineage): Base-1T and WeightedLoss-1T isolate loss-side imbalance-control choices under the same single-token prefix architecture.
     \item Training-policy group (maxpool lineage): MaxPool-8T, HardMining-8T, and Curriculum-8T isolate optimization-policy effects in the maxpool-based branch.
     \item No-findings text-policy group: DefaultText and SynonymText share the same resized alignment backbone and differ only in default empty-organ phrasing.
-    \item Decoder-family group: MedGemma, BERT-base, GPT-2, and BioBART use the same organ-attention visual frontend for cross-decoder comparison.
+    \item Decoder-family group: MedGemma, \ac{BERTbase}, \ac{GPTtwo}, and BioBART use the same organ-attention visual frontend for cross-decoder comparison.
 \end{itemize}
 
 \section{Decoder Adaptation and Training Objective}\label{sec:method_decoder_objective}
@@ -191,7 +191,7 @@ To keep interpretation focused, we organize results by groups where one factor i
 MedGemma is adapted with LoRA~\cite{hu2022lora} while the base model remains frozen. Main settings are rank $r=16$, $\alpha=32$, dropout $0.05$, and target modules
 \texttt{q\_proj, k\_proj, v\_proj, o\_proj, gate\_proj, up\_proj, down\_proj}.
 
-BERT-base, GPT-2, and BioBART branches use the same organ-attention visual frontend within a \texttt{VisionEncoderDecoderModel} interface. The BERT-base branch is trained with language modeling loss as a reproducible reference aligned with the fVLM decoder description. Decoder-side adaptation unfreezes a restricted subset (cross-attention/normalization/output layers and embeddings). For BioBART, shared embeddings and output-head weights are copied from pretrained checkpoints to avoid random-initialization drift in wrapper mode.
+\ac{BERTbase}, \ac{GPTtwo}, and BioBART branches use the same organ-attention visual frontend within a \texttt{VisionEncoderDecoderModel} interface. The \ac{BERTbase} branch is trained with language modeling loss as a reproducible reference aligned with the fVLM decoder description. Decoder-side adaptation unfreezes a restricted subset (cross-attention/normalization/output layers and embeddings). For BioBART, shared embeddings and output-head weights are copied from pretrained checkpoints to avoid random-initialization drift in wrapper mode.
 
 \subsection{Weighted Language Modeling Loss}
 With batch index $i$, organ $o$, and token position $t$, the primary objective is:
@@ -210,7 +210,7 @@ and optimize:
 \begin{equation}
 \mathcal{L} = \mathcal{L}_{\mathrm{LM}} + \lambda \mathcal{L}_{\mathrm{align}}.
 \end{equation}
-This is used mainly in CNNAlign-8T and Align-8T, and in selected BERT-base/GPT-2/BioBART branches.
+This is used mainly in CNNAlign-8T and Align-8T, and in selected \ac{BERTbase}/\ac{GPTtwo}/BioBART branches.
 
 \section{Optimization and Inference}\label{sec:method_optimization_inference}
 \subsection{Shared Optimization Settings}
@@ -227,7 +227,7 @@ Across main training runs, settings are largely standardized:
 Beyond architecture, the active training-policy comparisons evaluate curriculum learning, hard-example mining, and organ-weighted losses.
 
 \subsection{Organ-Wise Inference and Report Assembly}
-At inference, one prompt is generated per organ and decoded with controlled generation settings. MedGemma runs typically use 3 beams and \texttt{max\_new\_tokens=100}; BERT-base/GPT-2/BioBART runs typically use 4 beams and \texttt{max\_length=120}. For strict within-family ranking, decoding policy is held fixed (beam vs sampling and length limits). Outputs are assembled in fixed organ order:
+At inference, one prompt is generated per organ and decoded with controlled generation settings. MedGemma runs typically use 3 beams and \texttt{max\_new\_tokens=100}; \ac{BERTbase}/\ac{GPTtwo}/BioBART runs typically use 4 beams and \texttt{max\_length=120}. For strict within-family ranking, decoding policy is held fixed (beam vs sampling and length limits). Outputs are assembled in fixed organ order:
 \begin{equation}
 \hat{R} = \texttt{LUNG: }\hat{y}_{\mathrm{lung}}\;\Vert\;\cdots\;\Vert\;\texttt{KIDNEY: }\hat{y}_{\mathrm{kidney}}.
 \end{equation}

@@ -2,7 +2,7 @@
 
 \section{Experimental Setup}\label{sec:exp_setup}
 \subsection{Objectives and Research Questions}
-This chapter evaluates organ-aware 3D CT report generation under a consistent CT-RATE protocol. Results are organized by four research questions:
+This chapter evaluates organ-aware 3D CT report generation under a consistent \ac{CTRATE} protocol. Results are organized by four research questions:
 \begin{itemize}
     \item \textbf{RQ1 (Token-Interface Bundle):} Does the joint token-budget and interface design improve report quality?
     \item \textbf{RQ2 (Architecture):} Do heavier visual modules outperform the simpler masked cross-attention baseline?
@@ -58,7 +58,7 @@ Per-organ support is uneven in decomposed chest-CT reporting. Table~\ref{tab:org
 \end{table}
 
 \subsection{Implementation and Optimization Defaults}
-Training/evaluation uses PyTorch, HuggingFace Transformers, and MONAI. Default optimization settings across training runs are listed in Table~\ref{tab:training_defaults}.
+Training/evaluation uses PyTorch, HuggingFace Transformers, and \ac{MONAI}. Default optimization settings across training runs are listed in Table~\ref{tab:training_defaults}.
 
 \begin{table}[htbp]
     \centering
@@ -104,15 +104,15 @@ Table~\ref{tab:ablation_axes} defines the comparison axes used throughout this c
 
 \section{Evaluation Protocol}\label{sec:exp_eval_protocol}
 \subsection{Metric Families}\label{sec:evaluation_metrics}
-We report complementary metric groups. Lexical overlap is measured with BLEU-4~\cite{papineni2002bleu}, ROUGE-L~\cite{lin2004rouge}, METEOR~\cite{banerjee2005meteor}, and CIDEr~\cite{vedantam2015cider}. Semantic similarity is measured with BERTScore~\cite{zhang2019bertscore}. Clinical and factual consistency is measured with CheXbert~\cite{smit2020chexbert}, RadGraph~\cite{jain2021radgraph}, GREEN~\cite{ostmeier2024green}, RadCliQ~\cite{yu2023radcliq}, and an SRR-BERT style score.
-Here, CheXbert is the report-labeling evaluator and should not be conflated with the CheXpert chest X-ray dataset~\cite{irvin2019chexpert} used in model pretraining pipelines.
+We report complementary metric groups. Lexical overlap is measured with BLEU-4~\cite{papineni2002bleu}, \ac{ROUGEL}~\cite{lin2004rouge}, METEOR~\cite{banerjee2005meteor}, and \ac{CIDEr}~\cite{vedantam2015cider}. Semantic similarity is measured with \ac{BERTScore}~\cite{zhang2019bertscore}. Clinical and factual consistency is measured with \ac{CheXbert}~\cite{smit2020chexbert}, \ac{RadGraph}~\cite{jain2021radgraph}, \ac{GREEN}~\cite{ostmeier2024green}, \ac{RadCliQ}~\cite{yu2023radcliq}, and an SRR-BERT style score.
+Here, \ac{CheXbert} is the report-labeling evaluator and should not be conflated with the CheXpert chest X-ray dataset~\cite{irvin2019chexpert} used in model pretraining pipelines.
 
 Formal equations are provided in Appendix~\ref{appendix:metric_equations}. Chapter-level interpretation focuses on metric behavior and agreement patterns.
 
 \subsection{Metric Interpretation Policy}\label{sec:metric_interpretation_policy}
-Model ranking is anchored on GREEN and RadGraph, then cross-checked with lexical-semantic metrics. CheXbert is reported but interpreted cautiously for organ-decomposed CT text because its design assumptions are closer to full-report label extraction workflows.
+Model ranking is anchored on \ac{GREEN} and \ac{RadGraph}, then cross-checked with lexical-semantic metrics. \ac{CheXbert} is reported but interpreted cautiously for organ-decomposed CT text because its design assumptions are closer to full-report label extraction workflows.
 Unless noted otherwise, internal metric values in this thesis are reported on a $0$--$100$ scale.
-RadCliQ follows the inverse direction: lower values indicate better report quality.
+\ac{RadCliQ} follows the inverse direction: lower values indicate better report quality.
 
 For decoder-family analysis, we also report generation-behavior diagnostics to detect template collapse. These include exact-report uniqueness ratio, top-$k$ template coverage, and effective-template ratio $\exp(H)/N$, where $H$ is Shannon entropy over normalized report-frequency counts and $N$ is the number of generated reports.
 
@@ -175,7 +175,7 @@ Table~\ref{tab:medgemma_ablation_main} reports the core MedGemma ablations, and 
 \end{table}
 
 \subsection{RQ1: Token-Interface Bundle}
-RQ1 is answered with a strict token-count control inside the same stable-prefix branch. Base-8T outperforms Base-1T on GREEN, BLEU-4, ROUGE-L, BERTScore, and RadGraph, but is worse on RadCliQ (104.1 vs 100.2).
+RQ1 is answered with a strict token-count control inside the same stable-prefix branch. Base-8T outperforms Base-1T on \ac{GREEN}, BLEU-4, \ac{ROUGEL}, \ac{BERTScore}, and \ac{RadGraph}, but is worse on \ac{RadCliQ} (104.1 vs 100.2).
 
 Because Base-1T and Base-8T share the same prefix/interface design and matched training policy, this is interpreted as a direct token-count effect under the current compute budget.
 
@@ -185,7 +185,7 @@ The mask-downsampling transition remains secondary: MaxPool-8T stays below Base-
 Table~\ref{tab:delta_vs_baseline} summarizes deltas against baseline for representative models. In the maxpool-derived architecture branch, heavier modules such as Perceiver, multiscale, and CNN+alignment variants do not consistently outperform MaxPool-8T under the current training budget.
 
 Within this branch, Multiscale-8T is the strongest of the heavier variants, but its gains are modest and not uniform across metric families. Perceiver-8T and CNNAlign-8T remain below MaxPool-8T on the main global signals, which weakens the claim that added architectural complexity is the main driver of quality in this setup.
-A direct loss-composition comparison is also available in this branch: MaxPool-8T (pure LM objective) versus Align-8T (LM+alignment). Align-8T remains below MaxPool-8T on GREEN, BLEU-4, and RadGraph, while slightly better on RadCliQ (100.7 vs 102.0), so alignment regularization alone does not deliver consistent global gains under the current setup.
+A direct loss-composition comparison is also available in this branch: MaxPool-8T (pure LM objective) versus Align-8T (LM+alignment). Align-8T remains below MaxPool-8T on \ac{GREEN}, BLEU-4, and \ac{RadGraph}, while slightly better on \ac{RadCliQ} (100.7 vs 102.0), so alignment regularization alone does not deliver consistent global gains under the current setup.
 
 The practical interpretation is that complexity helps only in narrow cases under the current budget and does not establish a robust global advantage. Under one-epoch training with the current optimization constraints, interface quality remains more reliable than heavier visual modules.
 
@@ -196,20 +196,20 @@ The practical interpretation is that complexity helps only in narrow cases under
     \begin{tabular}{lcccc}
         \toprule
         \textbf{Model} & $\Delta$GREEN & $\Delta$BLEU-4 & $\Delta$RadGraph & $\Delta$RadCliQ ($\downarrow$) \\\midrule
-        Base-8T & +1.21 & +0.49 & +0.75 & +3.87 \\
-        MaxPool-8T & +0.39 & +0.27 & +0.21 & +1.79 \\
-        Multiscale-8T & +1.10 & +0.28 & +0.31 & +1.99 \\
-        Perceiver-8T & -0.05 & -0.06 & -0.22 & +0.57 \\
-        Align-8T & -0.30 & +0.03 & -0.06 & +0.51 \\
-        CNNAlign-8T & -0.32 & -0.05 & +0.37 & +0.53 \\
-        HardMining-8T & -0.06 & +0.05 & -0.18 & -0.32 \\
-        WeightedLoss-1T & -1.81 & -2.05 & -2.46 & -4.99 \\
-        Curriculum-8T & -12.22 & -5.09 & -10.54 & -22.93 \\
+        Base-8T & +1.20 & +0.50 & +0.70 & +3.90 \\
+        MaxPool-8T & +0.40 & +0.30 & +0.20 & +1.80 \\
+        Multiscale-8T & +1.10 & +0.30 & +0.30 & +2.00 \\
+        Perceiver-8T & +0.00 & -0.10 & -0.30 & +0.60 \\
+        Align-8T & -0.30 & +0.00 & -0.10 & +0.50 \\
+        CNNAlign-8T & -0.30 & +0.00 & +0.30 & +0.50 \\
+        HardMining-8T & +0.00 & +0.00 & -0.20 & -0.30 \\
+        WeightedLoss-1T & -1.80 & -2.00 & -2.50 & -5.00 \\
+        Curriculum-8T & -12.20 & -5.10 & -10.60 & -22.90 \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-Negative RadCliQ deltas indicate improvement, but isolated RadCliQ gains are not treated as sufficient evidence of better overall clinical quality.
+Negative \ac{RadCliQ} deltas indicate improvement, but isolated \ac{RadCliQ} gains are not treated as sufficient evidence of better overall clinical quality.
 
 For strict within-branch interpretation, maxpool-derived variants should be compared against MaxPool-8T in Table~\ref{tab:medgemma_ablation_full}, while single-token policy variants should be compared against Base-1T and token-count control against Base-8T.
 
@@ -219,7 +219,7 @@ Training-policy interventions split into two branches. In the single-token area-
 In the single-token area-derived branch, WeightedLoss-1T remains below Base-1T across clinical and lexical-semantic groups. This suggests that loss-side imbalance control alone does not recover baseline quality in the single-token branch.
 
 In the maxpool-derived branch, HardMining-8T stays closer to MaxPool-8T but still remains below it on the primary quality signals. Curriculum-8T shows the largest overall regression in this branch. This likely reflects instability or underfitting under the current schedule rather than a generally negative verdict on curriculum ideas.
-Interestingly, Curriculum-8T also yields the lowest RadCliQ in the MedGemma training matrix, despite severe degradation on GREEN and RadGraph. Under the metric policy used in this thesis, this indicates a disagreement between RadCliQ and the primary clinical ranking signals under this failure mode rather than evidence that Curriculum-8T is a stronger model overall. For this reason, RadCliQ is not interpreted in isolation, and model ranking remains anchored on GREEN and RadGraph.
+Interestingly, Curriculum-8T also yields the lowest \ac{RadCliQ} in the MedGemma training matrix, despite severe degradation on \ac{GREEN} and \ac{RadGraph}. Under the metric policy used in this thesis, this indicates a disagreement between \ac{RadCliQ} and the primary clinical ranking signals under this failure mode rather than evidence that Curriculum-8T is a stronger model overall. For this reason, \ac{RadCliQ} is not interpreted in isolation, and model ranking remains anchored on \ac{GREEN} and \ac{RadGraph}.
 
 \subsection{Text Policy Check: Default vs Synonym Templates}
 Table~\ref{tab:text_policy_synonyms} compares the resized alignment branch under different default empty-organ phrasing policies. The comparison is a strict one-factor pair: DefaultText vs SynonymText.
@@ -237,17 +237,17 @@ Table~\ref{tab:text_policy_synonyms} compares the resized alignment branch under
     \end{tabular}
 \end{table}
 
-In this branch, synonym-based default phrasing improves GREEN, BLEU-4, ROUGE-L, and RadGraph relative to the default-template baseline, but degrades RadCliQ (105.7 vs 88.9). This indicates that text policy alone can shift measured report quality, but the effect is metric-dependent even when architecture and training loop are held fixed.
+In this branch, synonym-based default phrasing improves \ac{GREEN}, BLEU-4, \ac{ROUGEL}, and \ac{RadGraph} relative to the default-template baseline, but degrades \ac{RadCliQ} (105.7 vs 88.9). This indicates that text policy alone can shift measured report quality, but the effect is metric-dependent even when architecture and training loop are held fixed.
 Code inspection indicates the resized alignment default and synonym branches share the same core architecture and training loop, so this is interpreted as a strict text-policy comparison rather than a model-family change.
 
 \subsection{RQ4: Decoder Family Comparison}
-Decoder comparison is a core axis with fixed protocol and table schema. Table~\ref{tab:decoder_comparison} now includes MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART rows from the same standardized metric pass.
+Decoder comparison is a core axis with fixed protocol and table schema. Table~\ref{tab:decoder_comparison} now includes MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART rows from the same standardized metric pass.
 
-The current evidence shows a mixed but interpretable pattern. BERT-base is strongest on GREEN, RadGraph, ROUGE-L, and BERTScore, while GPT-2 leads several overlap-style metrics including BLEU-4 and CIDEr (and ties METEOR). BioBART is best on RadCliQ in this table. MedGemma (Base-8T) remains competitive but trails BERT-base on these aggregate metrics while showing much lower template reuse.
+The current evidence shows a mixed but interpretable pattern. \ac{BERTbase} is strongest on \ac{GREEN}, \ac{RadGraph}, \ac{ROUGEL}, and \ac{BERTScore}, while \ac{GPTtwo} leads several overlap-style metrics including BLEU-4 and \ac{CIDEr} (and ties METEOR). BioBART is best on \ac{RadCliQ} in this table. MedGemma (Base-8T) remains competitive but trails \ac{BERTbase} on these aggregate metrics while showing much lower template reuse.
 
 Table~\ref{tab:decoder_sanity} reports neutral run diagnostics such as sample count and average output length.
 
-Table~\ref{tab:decoder_diversity} adds diversity diagnostics over normalized full reports. BERT-base shows the strongest repetition profile among the four decoders: only $41.3\%$ unique reports, $19.0\%$ coverage by the top five templates, and $48.2\%$ coverage by the top fifty templates. MedGemma (Base-8T) shows much lower template reuse, with $100.0\%$ unique reports and only $3.2\%$ top-fifty coverage. Here, uniqueness is exact-match uniqueness on normalized full reports, so it quantifies template reuse after normalization rather than semantic similarity.
+Table~\ref{tab:decoder_diversity} adds diversity diagnostics over normalized full reports. \ac{BERTbase} shows the strongest repetition profile among the four decoders: only $41.3\%$ unique reports, $19.0\%$ coverage by the top five templates, and $48.2\%$ coverage by the top fifty templates. MedGemma (Base-8T) shows much lower template reuse, with $100.0\%$ unique reports and only $3.2\%$ top-fifty coverage. Here, uniqueness is exact-match uniqueness on normalized full reports, so it quantifies template reuse after normalization rather than semantic similarity.
 
 \begin{table}[htbp]
     \centering
@@ -376,13 +376,13 @@ Cross-attention overlays are extracted with a dedicated visualization script and
 These maps are computed on a coarse token grid and then upsampled, so smooth organ-level support is expected. For this representative case, Base-8T shows stronger in-mask concentration than the two heavier variants in both organs (lung: $49.4\%$ vs $36.5\%$ and $44.8\%$; kidney: $28.5\%$ vs $14.9\%$ and $15.6\%$). We treat this figure as illustrative and consistent with aggregate localization trends, not as standalone proof from a single patient.
 
 \subsection{fVLM-Aligned Baseline on CT-RATE}
-To enable direct comparison under the same protocol, this thesis includes a baseline that uses the fVLM-aligned encoder setup with a BERT-base decoder, following the decoder description in the fVLM paper~\cite{shui2025fvlm}. This baseline is trained and evaluated on CT-RATE with the same preprocessing, report decomposition, and RadEval metric pipeline used for the other models in this chapter.
+To enable direct comparison under the same protocol, this thesis includes a baseline that uses the fVLM-aligned encoder setup with a \ac{BERTbase} decoder, following the decoder description in the fVLM paper~\cite{shui2025fvlm}. This baseline is trained and evaluated on \ac{CTRATE} with the same preprocessing, report decomposition, and RadEval metric pipeline used for the other models in this chapter.
 
-Its quantitative row is now reported in Table~\ref{tab:decoder_comparison}, which enables direct protocol-matched comparison against the MedGemma, GPT-2, and BioBART runs.
+Its quantitative row is now reported in Table~\ref{tab:decoder_comparison}, which enables direct protocol-matched comparison against the MedGemma, \ac{GPTtwo}, and BioBART runs.
 
 \section{Chapter Summary and Minimal Limitations Note}\label{sec:exp_summary}
-The strongest MedGemma ablation under the current matched protocol is Base-8T when ranking is anchored on GREEN and RadGraph. In the full cross-decoder comparison (Table~\ref{tab:decoder_comparison}), BERT-base is highest on both metrics. The result pattern across RQ1 to RQ3 indicates that token-count scaling from 1T to 8T improves quality in the stable-prefix branch, while heavier architectural modules and extra training-policy complexity provide limited additional gains. RadCliQ is a notable exception and does not favor Base-8T in this ablation family.
+The strongest MedGemma ablation under the current matched protocol is Base-8T when ranking is anchored on \ac{GREEN} and \ac{RadGraph}. In the full cross-decoder comparison (Table~\ref{tab:decoder_comparison}), \ac{BERTbase} is highest on both metrics. The result pattern across RQ1 to RQ3 indicates that token-count scaling from 1T to 8T improves quality in the stable-prefix branch, while heavier architectural modules and extra training-policy complexity provide limited additional gains. \ac{RadCliQ} is a notable exception and does not favor Base-8T in this ablation family.
 
-The decoder axis for RQ4 now has complete standardized rows for all targeted decoder families in this thesis: MedGemma, fVLM-aligned BERT-base, GPT-2, and BioBART.
+The decoder axis for RQ4 now has complete standardized rows for all targeted decoder families in this thesis: MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART.
 
 Interpretation limits in this chapter are concise: uneven organ support in chest CT and partial metric-domain mismatch for organ-decomposed text. A full validity discussion is provided in Chapter~\ref{chapter:discussion}.

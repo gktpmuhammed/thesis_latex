@@ -13,21 +13,21 @@ The Vision Transformer (ViT)~\cite{dosovitskiy2021image} introduced a transforme
 
 After ViT, transformer variants sought to address its limitations for dense vision tasks and training efficiency. The Swin Transformer~\cite{liu2021swin} introduced hierarchical feature maps and window-based self-attention, with shifted windows across layers to exchange information between local regions. This design lowered computational cost while preserving strong representational capacity. As a result, transformer backbones became more practical for detection and segmentation tasks, which are important in medical imaging.
 
-In parallel, self-supervised learning reduced dependence on expensive annotations. Masked Autoencoders (MAE)~\cite{he2022masked} use an asymmetric encoder-decoder setup: the encoder processes only visible patches, while a lightweight decoder reconstructs masked content, often with masking ratios around 75\%. This strategy learns strong visual representations directly from unlabeled images. DINOv2~\cite{oquab2023dinov2} further showed that self-distillation without labels can produce robust and transferable features across many downstream tasks.
+In parallel, self-supervised learning reduced dependence on expensive annotations. Masked Autoencoders (\ac{MAE})~\cite{he2022masked} use an asymmetric encoder-decoder setup: the encoder processes only visible patches, while a lightweight decoder reconstructs masked content, often with masking ratios around 75\%. This strategy learns strong visual representations directly from unlabeled images. DINOv2~\cite{oquab2023dinov2} further showed that self-distillation without labels can produce robust and transferable features across many downstream tasks.
 
 \subsection{Adaptation to 3D Medical Volumes}
 
 In medical imaging, transformers are attractive because they capture long-range spatial dependencies that are difficult to model with purely local operators. Early hybrid designs such as TransUNet~\cite{chen2021transunet} combined CNN-based local feature extraction with transformer-based global context modeling for 2D segmentation.
 
-Clinical modalities such as CT and MRI are inherently volumetric. Slice-by-slice processing can miss through-plane continuity and weak cross-slice patterns. UNETR~\cite{hatamizadeh2022unetr} addressed this limitation by tokenizing 3D patches and encoding the full volume with a ViT backbone.
+Clinical modalities such as CT and MRI are inherently volumetric. Slice-by-slice processing can miss through-plane continuity and weak cross-slice patterns. \ac{UNETR}~\cite{hatamizadeh2022unetr} addressed this limitation by tokenizing 3D patches and encoding the full volume with a ViT backbone.
 
-The main limitation of direct 3D transformer modeling is computational cost. Attention complexity grows quadratically with token count, while token count in volumetric inputs grows rapidly with spatial resolution. For high-resolution CT, full global self-attention can exceed practical GPU memory budgets. Recent 3D transformer variants address this with windowed or sparse attention, hierarchical processing, and early spatial downsampling to keep training and inference feasible.
+The main limitation of direct 3D transformer modeling is computational cost. Attention complexity grows quadratically with token count, while token count in volumetric inputs grows rapidly with spatial resolution. For high-resolution CT, full global self-attention can exceed practical \ac{GPU} memory budgets. Recent 3D transformer variants address this with windowed or sparse attention, hierarchical processing, and early spatial downsampling to keep training and inference feasible.
 
 %% ========================================================
 \section{Vision--Language Models}\label{sec:rw_vlm}
 %% ========================================================
 
-Vision--language models (VLMs) aim to connect visual perception and natural language understanding. These models learn joint representations of images and text, enabling cross-modal tasks such as image captioning, visual question answering (VQA), and multimodal reasoning.
+Vision--language models (VLMs) aim to connect visual perception and natural language understanding. These models learn joint representations of images and text, enabling cross-modal tasks such as image captioning, visual question answering (\ac{VQA}), and multimodal reasoning.
 
 \subsection{Contrastive Alignment and the CLIP Paradigm}
 
@@ -47,15 +47,15 @@ LLaVA (Large Language-and-Vision Assistant)~\cite{liu2024visual} simplified thes
 
 \subsection{Medical Vision-Language Models}
 
-Adapting VLMs to the medical domain presents additional challenges. Medical images, including high-resolution multi-parametric MRIs and chest X-rays, have different characteristics from natural images in datasets such as COCO and ImageNet. Furthermore, clinical texts use specialized vocabulary, and tolerance for factual error in medical AI is low.
+Adapting VLMs to the medical domain presents additional challenges. Medical images, including high-resolution multi-parametric MRIs and chest X-rays, have different characteristics from natural images in datasets such as \ac{COCO} and ImageNet. Furthermore, clinical texts use specialized vocabulary, and tolerance for factual error in medical \ac{AI} is low.
 
 Early attempts to bridge this gap focused on domain-specific contrastive pretraining. BiomedCLIP~\cite{zhang2023biomedclip} pretrained a CLIP-style architecture from scratch on 15 million biomedical image--text pairs sourced from PubMed Central articles, showing that in-domain pretraining improves downstream biomedical classification and retrieval compared to generic CLIP models.
 
 For 2D clinical radiology, development has accelerated in recent years~\cite{wang2025rrgsurvey}. CheXagent~\cite{chen2024chexagent} was introduced as a clinical foundation model for chest X-ray interpretation, fine-tuned on large corpora of radiology reports to interpret images and answer clinical questions. MAIRA-2~\cite{bannur2024maira} advanced grounded report generation by linking generated assertions to localized bounding boxes in the original X-ray, reducing unsupported findings and improving trustworthiness.
 
-For 3D medical imaging, the challenge is more severe because volumetric data is large and paired text data is limited. Hamamci et al.~\cite{hamamci2024foundation} introduced CT-CLIP, a contrastive learning framework engineered for 3D computed tomography. Trained on the CT-RATE dataset, which pairs 3D volumetric CT scans with corresponding free-text radiology reports, CT-CLIP learns 3D structural visual representations aligned with clinical text. This work is among the earliest large-scale efforts to apply vision--language pretraining directly to volumetric medical data.
+For 3D medical imaging, the challenge is more severe because volumetric data is large and paired text data is limited. Hamamci et al.~\cite{hamamci2024foundation} introduced CT-CLIP, a contrastive learning framework engineered for 3D computed tomography. Trained on the \ac{CTRATE} dataset, which pairs 3D volumetric CT scans with corresponding free-text radiology reports, CT-CLIP learns 3D structural visual representations aligned with clinical text. This work is among the earliest large-scale efforts to apply vision--language pretraining directly to volumetric medical data.
 
-Recent 3D CT work has moved beyond early chest-focused contrastive setups. Merlin~\cite{Blankemeier_2026} presents a CT foundation-model pipeline with paired abdominal CT, report text, and EHR signals, and evaluates transfer across several downstream tasks, including retrieval, report generation, and segmentation. HLIP~\cite{zhao2026scalablelanguageimagepretraining3d} addresses pretraining at larger clinical scale with a hierarchical attention scheme over slices, scans, and studies, showing that lower-curation clinical collections can still be useful for 3D language--image learning.
+Recent 3D CT work has moved beyond early chest-focused contrastive setups. Merlin~\cite{Blankemeier_2026} presents a CT foundation-model pipeline with paired abdominal CT, report text, and \ac{EHR} signals, and evaluates transfer across several downstream tasks, including retrieval, report generation, and segmentation. HLIP~\cite{zhao2026scalablelanguageimagepretraining3d} addresses pretraining at larger clinical scale with a hierarchical attention scheme over slices, scans, and studies, showing that lower-curation clinical collections can still be useful for 3D language--image learning.
 
 MedGemma~\cite{yang2024medgemma} is a family of medical foundation models built on top of the Gemma architecture~\cite{team2024gemma}. It inherits the general-language capabilities of Gemma and adds continued medical pretraining and instruction tuning on biomedical literature, medical exams, and de-identified clinical notes. The instruction-tuned variant MedGemma-4B-IT reports strong zero-shot and few-shot performance on medical reasoning tasks. In this thesis, MedGemma serves as one of the core decoder families evaluated in the report-generation pipeline.
 
@@ -71,7 +71,7 @@ Encoder-Decoder models, such as BART (Bidirectional and Auto-Regressive Transfor
 
 In the biomedical domain, BioBART~\cite{yuan2022biobart} adapts this architecture by continually pretraining the baseline BART model on a large corpus of PubMed abstracts. This domain-specific pretraining helps BioBART retain BART's strong generation quality while adapting vocabulary and latent representations to biomedical terminology. In standard vision-language pipelines using Encoder-Decoder backbones, visual embeddings are typically fed directly into the bidirectional encoder, so the model can form a global contextual representation before autoregressive decoding begins.
 
-Conversely, Causal Language Models (CLMs) use a decoder-only architecture that predicts the next token using only preceding tokens. GPT-2 (Generative Pre-trained Transformer 2)~\cite{radford2019language} popularized this scalable paradigm and showed that unsupervised next-token prediction on large web corpora can produce coherent zero-shot text generation. The base GPT-2 model has 124M parameters, and its clean architecture makes it a practical baseline for diagnostic report-generation experiments under limited compute.
+Conversely, Causal Language Models (CLMs) use a decoder-only architecture that predicts the next token using only preceding tokens. \ac{GPTtwo} (Generative Pre-trained Transformer 2)~\cite{radford2019language} popularized this scalable paradigm and showed that unsupervised next-token prediction on large web corpora can produce coherent zero-shot text generation. The base \ac{GPTtwo} model has 124M parameters, and its clean architecture makes it a practical baseline for diagnostic report-generation experiments under limited compute.
 
 Unlike bidirectional encoders, causal models process the conditioning prompt autoregressively, including prepended visual tokens used as a soft prompt. This means left and right context are not mixed in a single bidirectional encoding step, but large modern causal models can still capture rich dependencies through scale and training data.
 
@@ -85,7 +85,7 @@ Early PEFT strategies included Adapter modules~\cite{houlsby2019parameter}, whic
 
 LoRA (Low-Rank Adaptation)~\cite{hu2022lora} addresses these issues and is now widely adopted in foundation-model fine-tuning. LoRA assumes that required updates to dense weight matrices have low intrinsic rank. It introduces trainable low-rank matrices in parallel with frozen linear layers, most often query and value projections in self-attention. Instead of updating the full matrix $W_0 \in \mathbb{R}^{d \times k}$, LoRA learns smaller matrices $A \in \mathbb{R}^{d \times r}$ and $B \in \mathbb{R}^{r \times k}$ where $r \ll \min(d, k)$, yielding $W_0 + \Delta W = W_0 + B A$. Because $B A$ can be merged into $W_0$ for deployment, LoRA does not add extra inference latency after merging.
 
-To further reduce training cost, QLoRA~\cite{dettmers2023qlora} combines LoRA with 4-bit Normal Float (NF4) double quantization. In QLoRA, frozen pretrained model weights are stored in 4-bit precision, while only the lightweight trainable LoRA adapter matrices are cast to higher precision such as BFloat16 during backpropagation. This combination substantially reduces VRAM requirements for fine-tuning multi-billion parameter foundation models and enables faster iteration on standard hardware.
+To further reduce training cost, \ac{QLoRA}~\cite{dettmers2023qlora} combines LoRA with 4-bit Normal Float (\ac{NF4}) double quantization. In \ac{QLoRA}, frozen pretrained model weights are stored in 4-bit precision, while only the lightweight trainable LoRA adapter matrices are cast to higher precision such as BFloat16 during backpropagation. This combination substantially reduces \ac{VRAM} requirements for fine-tuning multi-billion parameter foundation models and enables faster iteration on standard hardware.
 
 %% ========================================================
 \section{Radiology Report Generation}\label{sec:rw_reportgen}
@@ -101,7 +101,7 @@ Transformer-based methods later improved report quality by tracking long-range c
 
 \subsection{The Evaluation Paradigm: From N-Grams to Clinical Efficacy}
 
-Early report-generation studies relied heavily on lexical overlap metrics such as BLEU, ROUGE, and METEOR. In medical reporting, lexical overlap alone is insufficient because clinically meaningful errors can occur with small wording changes. The field therefore shifted toward clinically grounded metrics such as CheXbert~\cite{smit2020chexbert}, RadGraph~\cite{jain2021radgraph}, and GREEN~\cite{ostmeier2024green}, which better reflect factual and relational correctness. In this thesis, the high-level motivation is introduced here, while the operational metric interpretation policy is defined in Section~\ref{sec:metric_interpretation_policy}.
+Early report-generation studies relied heavily on lexical overlap metrics such as BLEU, ROUGE, and METEOR. In medical reporting, lexical overlap alone is insufficient because clinically meaningful errors can occur with small wording changes. The field therefore shifted toward clinically grounded metrics such as \ac{CheXbert}~\cite{smit2020chexbert}, \ac{RadGraph}~\cite{jain2021radgraph}, and \ac{GREEN}~\cite{ostmeier2024green}, which better reflect factual and relational correctness. In this thesis, the high-level motivation is introduced here, while the operational metric interpretation policy is defined in Section~\ref{sec:metric_interpretation_policy}.
 
 \subsection{2D Radiology Foundation Models}
 
@@ -113,9 +113,9 @@ At the same time, the architectural focus shifted from linguistic fluency toward
 
 \subsection{3D Volumetric Report Generation}
 
-While 2D X-ray interpretation has matured rapidly, 3D volumetric report generation from CT and MRI scans remains an open and challenging frontier. The shift from 2D to 3D sharply increases computational complexity in visual token processing. In addition, before the release of CT-RATE~\cite{hamamci2024foundation}, paired 3D volumes and free-text reports were scarce.
+While 2D X-ray interpretation has matured rapidly, 3D volumetric report generation from CT and MRI scans remains an open and challenging frontier. The shift from 2D to 3D sharply increases computational complexity in visual token processing. In addition, before the release of \ac{CTRATE}~\cite{hamamci2024foundation}, paired 3D volumes and free-text reports were scarce.
 
-The release of CT-RATE spurred the rapid development of several pioneering 3D multimodal foundation models:
+The release of \ac{CTRATE} spurred the rapid development of several pioneering 3D multimodal foundation models:
 
 \begin{itemize}
     \item \textbf{CT2Rep}~\cite{hamamci2024ct2rep}: As one of the earliest works using CT-RATE, CT2Rep showed that automated report generation for 3D medical imaging is feasible when 3D visual tokens are projected into a suitable language decoder.
@@ -126,7 +126,7 @@ The release of CT-RATE spurred the rapid development of several pioneering 3D mu
 
 Recent work also emphasized fine-grained anatomical supervision for CT understanding. fVLM~\cite{shui2025fvlm} introduced large-scale and fine-grained vision-language pretraining for CT and reported strong gains on report-generation benchmarks. Its organ-aware supervision and decomposition perspective directly motivates the organ-guided decomposition strategy used in this thesis.
 
-Beyond strictly comparable CT-RATE leaderboard settings, Merlin~\cite{Blankemeier_2026} also explores anatomy-adapted report drafting inside a multitask CT foundation-model framework, supporting the trend toward structured generation. SimCroP~\cite{wang2025simcropradiographrepresentationlearning} focuses on chest CT representation learning rather than direct report generation, but its coarse-to-fine alignment strategy is still relevant here because clinically important findings are often spatially sparse and depend on precise local region--text grounding.
+Beyond strictly comparable \ac{CTRATE} leaderboard settings, Merlin~\cite{Blankemeier_2026} also explores anatomy-adapted report drafting inside a multitask CT foundation-model framework, supporting the trend toward structured generation. SimCroP~\cite{wang2025simcropradiographrepresentationlearning} focuses on chest CT representation learning rather than direct report generation, but its coarse-to-fine alignment strategy is still relevant here because clinically important findings are often spatially sparse and depend on precise local region--text grounding.
 
 A key challenge across these works is token compression. A raw 3D CT volume contains far more information than a 2D image, and naive patch extraction can produce tens of thousands of tokens that overwhelm the LLM decoder. Recent evidence~\cite{hamamci2025bettertokensbetter3d} shows that tokenization design is a primary performance driver in 3D VLMs: the paper highlights limitations of slice-wise tokenization and reports gains from compact volumetric tokens trained with a curriculum that includes local reconstruction, overlapping-window tiling, and long-context refinement.
 
