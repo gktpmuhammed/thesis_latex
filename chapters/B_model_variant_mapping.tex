@@ -11,6 +11,7 @@ It serves as the canonical reference for reproducible model-to-artifact lookup.
     \small
     \caption{Display-name mapping for the main training result set (\texttt{results\_retrain}).}
     \label{tab:appendix_variant_mapping_main}
+    \resizebox{\textwidth}{!}{%
     \begin{tabular}{p{3.2cm}p{4.7cm}p{2.6cm}p{3.8cm}}
         \toprule
         \textbf{Display Name} & \textbf{Raw Run ID} & \textbf{Axis} & \textbf{Main Difference} \\\midrule
@@ -26,6 +27,7 @@ It serves as the canonical reference for reproducible model-to-artifact lookup.
         WeightedLoss-1T & \path{lora_with_vis_tokens_pos_embed_weight_loss} & Training policy & Single-token branch with organ-wise and label-type loss weighting \\
         \bottomrule
     \end{tabular}
+    }
 \end{table}
 
 \section{Text-Policy Set (Legacy)}
@@ -36,6 +38,7 @@ These entries are kept separate from the main training set to avoid mixing exper
     \small
     \caption{Display-name mapping for the legacy text-policy runs (\texttt{results}).}
     \label{tab:appendix_variant_mapping_text}
+    \resizebox{\textwidth}{!}{%
     \begin{tabular}{p{3.8cm}p{5.0cm}p{4.9cm}}
         \toprule
         \textbf{Display Name} & \textbf{Raw Run ID} & \textbf{Comparability Note} \\\midrule
@@ -43,12 +46,14 @@ These entries are kept separate from the main training set to avoid mixing exper
         SynonymText & \path{medgemma_architecture_v3_resized_synonyms} & Strict pair with DefaultText \\
         \bottomrule
     \end{tabular}
+    }
 \end{table}
 
 \section{Legacy Aliases and Implementation-Only Variant}
 \begin{itemize}
     \item \path{medical_vlm_8_tokens_full} is a deprecated duplicate branch of the current Base-8T setup and is excluded from active comparison tables.
-    \item \path{lora_with_vis_tokens_pos_embed} and \path{medgemma_lora_vis_token_pos_embed} are older naming aliases of the Base-1T branch in legacy result exports.
+    \item \path{lora_with_vis_tokens_pos_embed} is an older naming alias of the Base-1T branch in legacy result exports.
+    \item \path{medgemma_lora_vis_token_pos_embed} is an older naming alias of the Base-1T branch in legacy result exports.
     \item \path{medgemma_lora_vis_token} corresponds to a single-token interface prototype (Base-1T) kept for implementation comparison; it is not included in the standardized training metric tables.
 \end{itemize}
 

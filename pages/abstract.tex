@@ -7,3 +7,15 @@ We propose an end-to-end pipeline that combines volumetric CT preprocessing with
 Experiments on \ac{CTRATE} show that interface calibration and token budget have higher impact than added architectural complexity. In controlled ablations, the stable-prefix 8-token MedGemma variant (Base-8T) outperforms the matched 1-token variant (Base-1T) on \ac{GREEN}, \ac{RadGraph}, and most lexical-semantic metrics, but not on \ac{RadCliQ}. In decoder-family comparison under the same evaluation protocol, the finalized rows show a mixed ranking: the fVLM-aligned \ac{BERTbase} baseline is strongest on \ac{GREEN}, \ac{RadGraph}, \ac{ROUGEL}, and \ac{BERTScore}, while \ac{GPTtwo} leads overlap-style metrics such as BLEU-4 and \ac{CIDEr}, BioBART is strongest on \ac{RadCliQ}, and MedGemma shows substantially lower template reuse and higher output diversity.
 
 Overall, the thesis provides a reproducible organ-aware 3D report generation framework, code-grounded ablation evidence, and a complete protocol-matched cross-decoder comparison.
+
+\begin{otherlanguage}{ngerman}
+\chapter{Kurzfassung}
+
+Diese Arbeit untersucht die organbewusste Generierung radiologischer Befunde aus 3D-Brustkorb-CT mit Vision-Language-Foundation-Modellen. Die zentrale Herausforderung besteht darin, klinisch relevante anatomische Information zu erhalten und gleichzeitig die visuelle Token-Schnittstelle kompakt und stabil für die Sprachdekodierung zu halten.
+
+Wir schlagen eine durchgängige Pipeline vor, die volumetrische CT-Vorverarbeitung mit Organmasken-Supervision, LLM-basierte Zerlegung von Befunden in organspezifische Ziele, organ-konditionierte visuelle Token-Extraktion aus einem 3D-Visionsencoder sowie Decoder-Anpassung mit parameter-effizientem Fine-Tuning kombiniert. Das Framework ist für protokoll-konsistente Vergleiche zwischen MedGemma, \ac{GPTtwo}, BioBART und einer fVLM-ausgerichteten \ac{BERTbase}-Baseline ausgelegt.
+
+Experimente auf \ac{CTRATE} zeigen, dass Kalibrierung der Schnittstelle und Token-Budget stärkeren Einfluss haben als zusätzliche Architekturkomplexität. In kontrollierten Ablationen übertrifft die stabile 8-Token-MedGemma-Variante (Base-8T) die passende 1-Token-Variante (Base-1T) bei \ac{GREEN}, \ac{RadGraph} und den meisten lexikalisch-semantischen Metriken, jedoch nicht bei \ac{RadCliQ}. Im Decoder-Vergleich unter identischem Evaluationsprotokoll ergibt sich ein gemischtes Ranking. Die fVLM-ausgerichtete \ac{BERTbase}-Baseline ist am stärksten bei \ac{GREEN}, \ac{RadGraph}, \ac{ROUGEL} und \ac{BERTScore}. \ac{GPTtwo} führt bei overlap-orientierten Metriken wie BLEU-4 und \ac{CIDEr}. BioBART ist bei \ac{RadCliQ} am besten. MedGemma zeigt eine geringere Wiederverwendung von Vorlagen und gleichzeitig höhere Ausgabediversität.
+
+Insgesamt liefert die Arbeit ein reproduzierbares, organbewusstes 3D-Framework zur Befundgenerierung, codebasierte Ablationsevidenz sowie einen vollständigen, protokoll-konsistenten Cross-Decoder-Vergleich.
+\end{otherlanguage}

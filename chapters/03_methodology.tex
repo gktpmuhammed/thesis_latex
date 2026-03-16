@@ -31,7 +31,7 @@ Figure~\ref{fig:organ_decomposition_pipeline} illustrates this pipeline from fre
     \label{fig:organ_decomposition_pipeline}
 \end{figure}
 
-The same interface is used across four decoder families: MedGemma~\cite{yang2024medgemma}, \ac{BERTbase}~\cite{devlin2019bert}, \ac{GPTtwo}~\cite{radford2019language}, and BioBART~\cite{yuan2022biobart}.
+The same interface is shared by four decoder families: MedGemma, \ac{BERTbase}, \ac{GPTtwo}, and BioBART~\cite{yang2024medgemma,devlin2019bert,radford2019language,yuan2022biobart}.
 
 \section{Data and Targets}\label{sec:method_data_targets}
 \subsection{Volume and Mask Preprocessing}
@@ -156,6 +156,7 @@ Table~\ref{tab:model_matrix_method} summarizes the major variants with concise d
     \centering
     \caption{Model variants and principal design differences.}
     \label{tab:model_matrix_method}
+    \resizebox{\textwidth}{!}{%
     \begin{tabular}{p{3.2cm}p{10.8cm}}
         \toprule
         \textbf{Variant} & \textbf{Main Design Choice} \\\midrule
@@ -169,9 +170,10 @@ Table~\ref{tab:model_matrix_method} summarizes the major variants with concise d
         Curriculum-8T & Two-phase pathology-first curriculum before full-distribution training. \\
         HardMining-8T & Dynamic weighted sampler emphasizing high-loss samples. \\
         WeightedLoss-1T & Single-token prefix-stable branch with reweighted loss contributions for explicit versus default organ statements. \\
-        \ac{BERTbase} / \ac{GPTtwo} / BioBART branches & Same organ-attention encoder interface with decoder-family adaptation for cross-family comparison. \\
+        Decoder-family branches & Same organ-attention encoder interface for \ac{BERTbase}, \ac{GPTtwo}, and BioBART. \\
         \bottomrule
     \end{tabular}
+    }
 \end{table}
 
 \subsection{Controlled Comparison Groups}
@@ -210,7 +212,7 @@ and optimize:
 \begin{equation}
 \mathcal{L} = \mathcal{L}_{\mathrm{LM}} + \lambda \mathcal{L}_{\mathrm{align}}.
 \end{equation}
-This is used mainly in CNNAlign-8T and Align-8T, and in selected \ac{BERTbase}/\ac{GPTtwo}/BioBART branches.
+This is used mainly in CNNAlign-8T and Align-8T, and in selected \ac{BERTbase}, \ac{GPTtwo}, and BioBART branches.
 
 \section{Optimization and Inference}\label{sec:method_optimization_inference}
 \subsection{Shared Optimization Settings}

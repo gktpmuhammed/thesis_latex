@@ -18,7 +18,7 @@ Our main objective is to improve report quality through design choices around th
 
 Instead of relying only on text-overlap metrics such as BLEU \cite{papineni2002bleu} and ROUGE \cite{lin2004rouge}, we also evaluate clinical quality using \ac{RadGraph} \cite{jain2021radgraph} and \ac{GREEN} \cite{ostmeier2024green}, the Generative Radiology Report Evaluation and Error Notation metric. This helps us judge whether the generated reports are clinically useful, not only lexically similar.
 
-Through ablations across decoder architectures, including MedGemma \cite{yang2024medgemma}, \ac{BERTbase} \cite{devlin2019bert}, \ac{GPTtwo} \cite{radford2019language}, and BioBART \cite{yuan2022biobart}, we analyze which decoder choices and interface designs best convert pretrained 3D visual representations into structured clinical text. More specifically, under a shared protocol, we test whether report quality is more sensitive to frontend/interface design or to decoder family choice.
+We analyze which decoder choices and interface designs best convert pretrained 3D visual representations into structured clinical text. The ablation set spans MedGemma \cite{yang2024medgemma}, \ac{BERTbase} \cite{devlin2019bert}, \ac{GPTtwo} \cite{radford2019language}, and BioBART \cite{yuan2022biobart}. Under a shared protocol, we test whether report quality is more sensitive to frontend/interface design or to decoder family choice.
 
 \section{Contributions}
 The main contributions of this thesis are as follows:

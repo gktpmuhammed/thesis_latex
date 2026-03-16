@@ -87,7 +87,7 @@ Table~\ref{tab:ablation_axes} defines the comparison axes used throughout this c
     \centering
     \caption{Ablation axes and evaluated variants.}
     \label{tab:ablation_axes}
-    \begin{tabular}{p{3.1cm}p{10.8cm}}
+    \begin{tabular}{p{3.0cm}p{10.6cm}}
         \toprule
         \textbf{Axis} & \textbf{Variants} \\\midrule
         Token-count control in stable-prefix lineage & Base-1T, Base-8T \\
@@ -110,7 +110,7 @@ Here, \ac{CheXbert} is the report-labeling evaluator and should not be conflated
 Formal equations are provided in Appendix~\ref{appendix:metric_equations}. Chapter-level interpretation focuses on metric behavior and agreement patterns.
 
 \subsection{Metric Interpretation Policy}\label{sec:metric_interpretation_policy}
-Model ranking is anchored on \ac{GREEN} and \ac{RadGraph}, then cross-checked with lexical-semantic metrics. \ac{CheXbert} is reported but interpreted cautiously for organ-decomposed CT text because its design assumptions are closer to full-report label extraction workflows.
+Model ranking is anchored on \ac{GREEN} and \ac{RadGraph}, then cross-checked with lexical-semantic metrics. \ac{CheXbert} is reported as an auxiliary signal. For organ-decomposed CT text, it is interpreted cautiously because its design assumptions are closer to full-report label extraction workflows.
 Unless noted otherwise, internal metric values in this thesis are reported on a $0$--$100$ scale.
 \ac{RadCliQ} follows the inverse direction: lower values indicate better report quality.
 
@@ -182,7 +182,7 @@ Because Base-1T and Base-8T share the same prefix/interface design and matched t
 The mask-downsampling transition remains secondary: MaxPool-8T stays below Base-8T on the primary quality signals, so max-pooling alone does not explain the Base-8T gain.
 
 \subsection{RQ2: Architecture Complexity}
-Table~\ref{tab:delta_vs_baseline} summarizes deltas against baseline for representative models. In the maxpool-derived architecture branch, heavier modules such as Perceiver, multiscale, and CNN+alignment variants do not consistently outperform MaxPool-8T under the current training budget.
+Table~\ref{tab:delta_vs_baseline} summarizes deltas against baseline for representative models. In the maxpool-derived architecture branch, heavier modules do not consistently outperform MaxPool-8T under the current training budget. Perceiver, multiscale, and CNN+alignment variants all follow this pattern.
 
 Within this branch, Multiscale-8T is the strongest of the heavier variants, but its gains are modest and not uniform across metric families. Perceiver-8T and CNNAlign-8T remain below MaxPool-8T on the main global signals, which weakens the claim that added architectural complexity is the main driver of quality in this setup.
 A direct loss-composition comparison is also available in this branch: MaxPool-8T (pure LM objective) versus Align-8T (LM+alignment). Align-8T remains below MaxPool-8T on \ac{GREEN}, BLEU-4, and \ac{RadGraph}, while slightly better on \ac{RadCliQ} (100.7 vs 102.0), so alignment regularization alone does not deliver consistent global gains under the current setup.
@@ -237,7 +237,7 @@ Table~\ref{tab:text_policy_synonyms} compares the resized alignment branch under
     \end{tabular}
 \end{table}
 
-In this branch, synonym-based default phrasing improves \ac{GREEN}, BLEU-4, \ac{ROUGEL}, and \ac{RadGraph} relative to the default-template baseline, but degrades \ac{RadCliQ} (105.7 vs 88.9). This indicates that text policy alone can shift measured report quality, but the effect is metric-dependent even when architecture and training loop are held fixed.
+In this branch, synonym-based default phrasing improves \ac{GREEN} and BLEU-4 relative to the default-template baseline. It also increases \ac{ROUGEL} and \ac{RadGraph}, but degrades \ac{RadCliQ} (105.7 vs 88.9). This indicates that text policy alone can shift measured report quality, but the effect is metric-dependent even when architecture and training loop are held fixed.
 Code inspection indicates the resized alignment default and synonym branches share the same core architecture and training loop, so this is interpreted as a strict text-policy comparison rather than a model-family change.
 
 \subsection{RQ4: Decoder Family Comparison}
@@ -307,7 +307,7 @@ To make the repetition profile concrete, Table~\ref{tab:decoder_repetition_examp
     \small
     \caption{Same-patient repetition example (patient \texttt{valid\_128\_a\_1}, organ \texttt{AORTA}). Excerpts are verbatim spans from generated and reference reports. Reuse is computed over the shared AORTA-support subset ($N=867$).}
     \label{tab:decoder_repetition_example}
-    \begin{tabular}{p{3.2cm}p{8.7cm}p{2.5cm}}
+    \begin{tabular}{p{2.9cm}p{8.0cm}p{2.2cm}}
         \toprule
         \textbf{Entry} & \textbf{AORTA excerpt} & \textbf{Exact reuse} \\\midrule
         Ground truth (reference) & The ascending aorta calibration is 41 mm. It is wider than normal. The descending aorta is slightly prominent. The aortic arch is 32 mm. It is wider than normal. Calcific atheroma plaques are observed in the aortic arch, ascending aorta, and coronary arteries. Calcific atheroma plaques are observed in the abdominal aorta. & -- \\

@@ -50,7 +50,7 @@ The lung/kidney attention comparison is consistent with this pattern: difference
 \section{Decoder Family Axis}
 The decoder-comparison protocol is structurally fixed with a shared frontend, shared metric pipeline, and shared artifact policy. All target rows are complete under this protocol: MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART. The current evidence favors \ac{BERTbase} on \ac{GREEN}, \ac{RadGraph}, \ac{ROUGEL}, and \ac{BERTScore}, while \ac{GPTtwo} leads overlap-style metrics such as BLEU-4 and \ac{CIDEr}; \ac{RadCliQ} is the explicit exception where BioBART is stronger.
 
-For practical deployment under organ-aware reporting objectives, model choice depends on priority: \ac{BERTbase} is stronger on aggregate metric ranking, while MedGemma is safer when lower template repetition and higher case-specific variation are prioritized.
+For practical deployment under organ-aware reporting objectives, model choice depends on priority. \ac{BERTbase} is stronger on aggregate metric ranking, while MedGemma is safer when lower template repetition and higher case-specific variation are prioritized.
 In short, aggregate \ac{GREEN}/\ac{RadGraph}-centered ranking favors \ac{BERTbase}, diversity/repetition diagnostics favor MedGemma, \ac{RadCliQ} favors BioBART, and the preferred decoder should be selected by deployment objective rather than a single universal ``best'' label.
 
 \section{Relation to Prior Paradigms}
