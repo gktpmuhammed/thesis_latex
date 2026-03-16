@@ -48,7 +48,7 @@ Accordingly, organ-level conclusions are most reliable for high-support organs a
 The lung/kidney attention comparison is consistent with this pattern: differences are visible in both organs, but sparse-organ behavior is more sensitive and should be validated over more than one case.
 
 \section{Decoder Family Axis}
-The decoder-comparison protocol is structurally fixed with a shared frontend, shared metric pipeline, and shared artifact policy. All target rows are now complete under this protocol: MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART. The current evidence favors \ac{BERTbase} on \ac{GREEN}, \ac{RadGraph}, \ac{ROUGEL}, and \ac{BERTScore}, while \ac{GPTtwo} leads overlap-style metrics such as BLEU-4 and \ac{CIDEr}; \ac{RadCliQ} is the explicit exception where BioBART is stronger.
+The decoder-comparison protocol is structurally fixed with a shared frontend, shared metric pipeline, and shared artifact policy. All target rows are complete under this protocol: MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART. The current evidence favors \ac{BERTbase} on \ac{GREEN}, \ac{RadGraph}, \ac{ROUGEL}, and \ac{BERTScore}, while \ac{GPTtwo} leads overlap-style metrics such as BLEU-4 and \ac{CIDEr}; \ac{RadCliQ} is the explicit exception where BioBART is stronger.
 
 For practical deployment under organ-aware reporting objectives, model choice depends on priority: \ac{BERTbase} is stronger on aggregate metric ranking, while MedGemma is safer when lower template repetition and higher case-specific variation are prioritized.
 In short, aggregate \ac{GREEN}/\ac{RadGraph}-centered ranking favors \ac{BERTbase}, diversity/repetition diagnostics favor MedGemma, \ac{RadCliQ} favors BioBART, and the preferred decoder should be selected by deployment objective rather than a single universal ``best'' label.
@@ -57,8 +57,8 @@ In short, aggregate \ac{GREEN}/\ac{RadGraph}-centered ranking favors \ac{BERTbas
 Compared with many 2D report-generation settings, 3D CT introduces higher token pressure and stronger grounding demands. The results suggest that decoder scaling or heavier visual modules alone are insufficient if token semantics at the interface are not explicit and stable. This aligns with anatomy-guided trends in recent segmentation-aware and decomposition-aware literature.
 
 \section{Validity and Limits}
-Internal validity is strongest for MedGemma-family comparisons because data interfaces and evaluation pipelines are controlled. Decoder-family conclusions are now grounded by completed MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART rows under one protocol.
-For RQ1 specifically, causal attribution to token count is stronger than in earlier drafts because Base-1T and Base-8T now share matched stable-prefix structure; remaining uncertainty mainly comes from single-run variance.
+Internal validity is strongest for MedGemma-family comparisons because data interfaces and evaluation pipelines are controlled. Decoder-family conclusions are grounded by completed MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART rows under one protocol.
+For RQ1 specifically, causal attribution to token count is supported because Base-1T and Base-8T share matched stable-prefix structure; remaining uncertainty mainly comes from single-run variance.
 
 Findings are specific to organ-decomposed chest-CT reporting and should not be over-generalized to other modalities or report styles without controlled replication.
 

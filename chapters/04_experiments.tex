@@ -241,7 +241,7 @@ In this branch, synonym-based default phrasing improves \ac{GREEN}, BLEU-4, \ac{
 Code inspection indicates the resized alignment default and synonym branches share the same core architecture and training loop, so this is interpreted as a strict text-policy comparison rather than a model-family change.
 
 \subsection{RQ4: Decoder Family Comparison}
-Decoder comparison is a core axis with fixed protocol and table schema. Table~\ref{tab:decoder_comparison} now includes MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART rows from the same standardized metric pass.
+Decoder comparison is a core axis with fixed protocol and table schema. Table~\ref{tab:decoder_comparison} includes MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART rows from the same standardized metric pass.
 
 The current evidence shows a mixed but interpretable pattern. \ac{BERTbase} is strongest on \ac{GREEN}, \ac{RadGraph}, \ac{ROUGEL}, and \ac{BERTScore}, while \ac{GPTtwo} leads several overlap-style metrics including BLEU-4 and \ac{CIDEr} (and ties METEOR). BioBART is best on \ac{RadCliQ} in this table. MedGemma (Base-8T) remains competitive but trails \ac{BERTbase} on these aggregate metrics while showing much lower template reuse.
 
@@ -378,11 +378,11 @@ These maps are computed on a coarse token grid and then upsampled, so smooth org
 \subsection{fVLM-Aligned Baseline on CT-RATE}
 To enable direct comparison under the same protocol, this thesis includes a baseline that uses the fVLM-aligned encoder setup with a \ac{BERTbase} decoder, following the decoder description in the fVLM paper~\cite{shui2025fvlm}. This baseline is trained and evaluated on \ac{CTRATE} with the same preprocessing, report decomposition, and RadEval metric pipeline used for the other models in this chapter.
 
-Its quantitative row is now reported in Table~\ref{tab:decoder_comparison}, which enables direct protocol-matched comparison against the MedGemma, \ac{GPTtwo}, and BioBART runs.
+Its quantitative row is reported in Table~\ref{tab:decoder_comparison}, which enables direct protocol-matched comparison against the MedGemma, \ac{GPTtwo}, and BioBART runs.
 
 \section{Chapter Summary and Minimal Limitations Note}\label{sec:exp_summary}
 The strongest MedGemma ablation under the current matched protocol is Base-8T when ranking is anchored on \ac{GREEN} and \ac{RadGraph}. In the full cross-decoder comparison (Table~\ref{tab:decoder_comparison}), \ac{BERTbase} is highest on both metrics. The result pattern across RQ1 to RQ3 indicates that token-count scaling from 1T to 8T improves quality in the stable-prefix branch, while heavier architectural modules and extra training-policy complexity provide limited additional gains. \ac{RadCliQ} is a notable exception and does not favor Base-8T in this ablation family.
 
-The decoder axis for RQ4 now has complete standardized rows for all targeted decoder families in this thesis: MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART.
+The decoder axis for RQ4 has complete standardized rows for all targeted decoder families in this thesis: MedGemma, fVLM-aligned \ac{BERTbase}, \ac{GPTtwo}, and BioBART.
 
 Interpretation limits in this chapter are concise: uneven organ support in chest CT and partial metric-domain mismatch for organ-decomposed text. A full validity discussion is provided in Chapter~\ref{chapter:discussion}.
