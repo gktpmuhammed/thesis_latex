@@ -17,23 +17,27 @@
   \vspace{5mm}
   {\large\MakeUppercase{\getUniversity{}} \par}
 
-  \vspace{10mm}
+  \vspace{8mm}
   {\Large \getDoctype{} in \getDegree{} \par}
 
   \vspace{10mm}
   {\huge\bfseries \getTitle{} \par}
 
-  \vspace{5mm}
+  \vspace{3mm}
   {\huge\bfseries \foreignlanguage{ngerman}{\getTitleGer{}} \par}
 
-  \vspace{10mm}
-  \begin{tabular}{p{35mm}p{105mm}}
+  \vspace{4mm}
+  \begingroup
+  \setlength{\tabcolsep}{0pt}
+  \renewcommand{\arraystretch}{0.95}
+  \begin{tabular}{p{31mm}@{\hspace{4mm}}p{109mm}}
     Author:          & \getAuthor{}         \\
-    Examiner:      & \getSupervisor{}     \\
-    Supervisor:         & \getAdvisor{}        \\
+    Examiner:        & \getSupervisor{}     \\
+    Supervisor:      & \getAdvisor{}        \\
     Submission Date: & \getSubmissionDate{} \\
-    Keywords: & \getKeywords{} \\
+    Keywords:        & {\footnotesize \getKeywords{}} \\
   \end{tabular}
+  \endgroup
 
   \IfFileExists{logos/faculty-\fg.pdf}{%
     \vfill{}
